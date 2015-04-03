@@ -83,25 +83,25 @@ func (dump *MongoDump) CreateUsersRolesVersionIntentsForDB(db string) error {
 	}
 
 	usersIntent := &intents.Intent{
-		DB:         "system",
-		C:          "users",
-		BSONPath:   filepath.Join(outDir, db, "$admin.system.users.bson"),
+		DB:         "admin",
+		C:          "system.users",
+		BSONPath:   filepath.Join(outDir, "$admin.system.users.bson"),
 		OpenIntent: createIntentFile,
 	}
 	dump.manager.Put(usersIntent)
 
 	rolesIntent := &intents.Intent{
-		DB:         "system",
-		C:          "roles",
-		BSONPath:   filepath.Join(outDir, db, "$admin.system.roles.bson"),
+		DB:         "admin",
+		C:          "system.roles",
+		BSONPath:   filepath.Join(outDir, "$admin.system.roles.bson"),
 		OpenIntent: createIntentFile,
 	}
 	dump.manager.Put(rolesIntent)
 
 	versionIntent := &intents.Intent{
-		DB:         "system",
-		C:          "version",
-		BSONPath:   filepath.Join(outDir, db, "$admin.system.version.bson"),
+		DB:         "admin",
+		C:          "system.version",
+		BSONPath:   filepath.Join(outDir, "$admin.system.version.bson"),
 		OpenIntent: createIntentFile,
 	}
 	dump.manager.Put(versionIntent)
