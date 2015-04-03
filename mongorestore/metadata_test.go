@@ -7,7 +7,6 @@ import (
 	"github.com/mongodb/mongo-tools/common/testutil"
 	. "github.com/smartystreets/goconvey/convey"
 	"gopkg.in/mgo.v2/bson"
-	"os"
 	"testing"
 )
 
@@ -97,13 +96,12 @@ func TestGetDumpAuthVersion(t *testing.T) {
 			})
 
 			Convey("auth version 3 should be detected", func() {
-				bsonFile, _ := os.Open("testdata/auth_version_3.bson")
 				restore.manager = intents.NewCategorizingIntentManager()
 				restore.manager.Put(&intents.Intent{
-					DB:       "admin",
-					C:        "system.version",
-					BSONPath: "testdata/auth_version_3.bson",
-					BSONFile: bsonFile,
+					DB:         "admin",
+					C:          "system.version",
+					BSONPath:   "testdata/auth_version_3.bson",
+					OpenIntent: openIntentFile,
 				})
 				version, err := restore.GetDumpAuthVersion()
 				So(err, ShouldBeNil)
@@ -111,13 +109,12 @@ func TestGetDumpAuthVersion(t *testing.T) {
 			})
 
 			Convey("auth version 5 should be detected", func() {
-				bsonFile, _ := os.Open("testdata/auth_version_5.bson")
 				restore.manager = intents.NewCategorizingIntentManager()
 				restore.manager.Put(&intents.Intent{
-					DB:       "admin",
-					C:        "system.version",
-					BSONPath: "testdata/auth_version_5.bson",
-					BSONFile: bsonFile,
+					DB:         "admin",
+					C:          "system.version",
+					BSONPath:   "testdata/auth_version_5.bson",
+					OpenIntent: openIntentFile,
 				})
 				version, err := restore.GetDumpAuthVersion()
 				So(err, ShouldBeNil)
@@ -145,13 +142,12 @@ func TestGetDumpAuthVersion(t *testing.T) {
 			})
 
 			Convey("auth version 3 should be detected when a version 3 file exists", func() {
-				bsonFile, _ := os.Open("testdata/auth_version_3.bson")
 				restore.manager = intents.NewCategorizingIntentManager()
 				restore.manager.Put(&intents.Intent{
-					DB:       "admin",
-					C:        "system.version",
-					BSONPath: "testdata/auth_version_3.bson",
-					BSONFile: bsonFile,
+					DB:         "admin",
+					C:          "system.version",
+					BSONPath:   "testdata/auth_version_3.bson",
+					OpenIntent: openIntentFile,
 				})
 				version, err := restore.GetDumpAuthVersion()
 				So(err, ShouldBeNil)
@@ -159,13 +155,12 @@ func TestGetDumpAuthVersion(t *testing.T) {
 			})
 
 			Convey("auth version 5 should be detected", func() {
-				bsonFile, _ := os.Open("testdata/auth_version_5.bson")
 				restore.manager = intents.NewCategorizingIntentManager()
 				restore.manager.Put(&intents.Intent{
-					DB:       "admin",
-					C:        "system.version",
-					BSONPath: "testdata/auth_version_5.bson",
-					BSONFile: bsonFile,
+					DB:         "admin",
+					C:          "system.version",
+					BSONPath:   "testdata/auth_version_5.bson",
+					OpenIntent: openIntentFile,
 				})
 				version, err := restore.GetDumpAuthVersion()
 				So(err, ShouldBeNil)

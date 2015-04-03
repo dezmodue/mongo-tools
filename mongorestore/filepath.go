@@ -43,6 +43,9 @@ func GetInfoFromFilename(filename string) (string, FileType) {
 }
 
 func openIntentFile(intent *intents.Intent) (err error) {
+	if intent.BSONPath == "" {
+		return fmt.Errorf("No BSONPath for %v.%v", intent.DB, intent.C)
+	}
 	intent.BSONFile, err = os.Open(intent.BSONPath)
 	if err != nil {
 		return fmt.Errorf("error reading BSON file %v: %v", intent.BSONPath, err)
@@ -52,6 +55,9 @@ func openIntentFile(intent *intents.Intent) (err error) {
 }
 
 func openMetadataFile(intent *intents.Intent) (err error) {
+	if intent.MetadataPath == "" {
+		return fmt.Errorf("No MetadataPath for %v.%v", intent.DB, intent.C)
+	}
 	intent.MetadataFile, err = os.Open(intent.MetadataPath)
 	if err != nil {
 		return fmt.Errorf("error reading Metadata file %v: %v", intent.MetadataPath, err)

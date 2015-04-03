@@ -557,7 +557,7 @@ func (dump *MongoDump) DumpSystemIndexes() error {
 func (dump *MongoDump) DumpMetadata() error {
 	allIntents := dump.manager.Intents()
 	for _, intent := range allIntents {
-		if intent.MetadataFile != nil {
+		if intent.OpenMetadata != nil {
 			err := dump.dumpMetadata(intent)
 			if err != nil {
 				return err

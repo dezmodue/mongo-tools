@@ -32,27 +32,32 @@ func (dump *MongoDump) outputPath(dbName, colName string) string {
 
 func createIntentFile(intent *intents.Intent) (err error) {
 	intent.BSONFile, err = os.Create(intent.BSONPath)
-	return
+	return err
 }
 
 func createMetadataFile(intent *intents.Intent) (err error) {
 	intent.MetadataFile, err = os.Create(intent.MetadataPath)
-	return
+	return err
 }
 
 func createMetadataStdout(intent *intents.Intent) (err error) {
 	intent.MetadataFile = os.Stdout
-	return
+	return nil
 }
 
 func createIntentStdout(intent *intents.Intent) (err error) {
 	intent.BSONFile = os.Stdout
-	return
+	return nil
 }
 
 func (dump *MongoDump) CreateOplogIntents() error {
 
 	err := dump.determineOplogCollectionName()
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(dump.OutputOptions.Out, defaultPermissions)
 	if err != nil {
 		return err
 	}
@@ -112,20 +117,22 @@ func (dump *MongoDump) CreateIntentForCollection(dbName, colName string) error {
 		return nil
 	}
 
+	outDir := filepath.Join(dump.OutputOptions.Out, dbName)
+	err := os.MkdirAll(outDir, defaultPermissions)
+	if err != nil {
+		return err
+	}
+
 	intent := &intents.Intent{
 		DB:         dbName,
 		C:          colName,
 		BSONPath:   dump.outputPath(dbName, colName) + ".bson",
 		OpenIntent: createIntentFile,
 	}
-	var err error
 
 	if !intent.IsSystemIndexes() {
 		intent.MetadataPath = dump.outputPath(dbName, colName) + ".metadata.json"
 		intent.OpenMetadata = createMetadataFile
-		if err != nil {
-			return err
-		}
 	}
 
 	// add stdout flags if we're using stdout
