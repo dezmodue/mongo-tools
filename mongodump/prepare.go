@@ -40,6 +40,16 @@ func createMetadataFile(intent *intents.Intent) (err error) {
 	return
 }
 
+func createMetadataStdout(intent *intents.Intent) (err error) {
+	intent.MetadataFile = os.Stdout
+	return
+}
+
+func createIntentStdout(intent *intents.Intent) (err error) {
+	intent.BSONFile = os.Stdout
+	return
+}
+
 func (dump *MongoDump) CreateOplogIntents() error {
 
 	err := dump.determineOplogCollectionName()
@@ -120,8 +130,8 @@ func (dump *MongoDump) CreateIntentForCollection(dbName, colName string) error {
 
 	// add stdout flags if we're using stdout
 	if dump.useStdout {
-		intent.BSONPath = "-"
-		intent.MetadataPath = "-"
+		intent.OpenMetadata = createMetadataStdout
+		intent.OpenIntent = createIntentStdout
 	}
 
 	// get a document count for scheduling purposes

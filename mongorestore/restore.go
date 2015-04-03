@@ -7,9 +7,7 @@ import (
 	"github.com/mongodb/mongo-tools/common/log"
 	"github.com/mongodb/mongo-tools/common/progress"
 	"gopkg.in/mgo.v2/bson"
-	"io"
 	"io/ioutil"
-	"os"
 	"strings"
 	"time"
 )

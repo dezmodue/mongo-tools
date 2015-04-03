@@ -400,7 +400,7 @@ func (restore *MongoRestore) GetDumpAuthVersion() (int, error) {
 
 	err := intent.OpenIntent(intent)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	bsonSource := db.NewDecodedBSONSource(db.NewBSONSource(intent.BSONFile))
 	defer bsonSource.Close()
