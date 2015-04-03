@@ -256,6 +256,7 @@ func (restore *MongoRestore) CreateIntentForCollection(db, collection, fullpath 
 			metadataPath := filepath.Join(filepath.Dir(fullpath), metadataName)
 			log.Logf(log.Info, "found metadata for collection at %v", metadataPath)
 			intent.MetadataPath = metadataPath
+			intent.OpenMetadata = openMetadataFile
 			break
 		}
 	}

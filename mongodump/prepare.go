@@ -126,12 +126,12 @@ func (dump *MongoDump) CreateIntentForCollection(dbName, colName string) error {
 	intent := &intents.Intent{
 		DB:         dbName,
 		C:          colName,
-		BSONPath:   dump.outputPath(dbName, colName) + ".bson",
+		BSONPath:   dump.outputPath(dbName, colName+".bson"),
 		OpenIntent: createIntentFile,
 	}
 
 	if !intent.IsSystemIndexes() {
-		intent.MetadataPath = dump.outputPath(dbName, colName) + ".metadata.json"
+		intent.MetadataPath = dump.outputPath(dbName, colName+".metadata.json")
 		intent.OpenMetadata = createMetadataFile
 	}
 
