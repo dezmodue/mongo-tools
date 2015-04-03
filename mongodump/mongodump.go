@@ -495,19 +495,25 @@ func (dump *MongoDump) DumpUsersAndRolesForDB(db string) error {
 
 	dbQuery := bson.M{"db": db}
 	usersQuery := session.DB("admin").C("system.users").Find(dbQuery)
-	err = dump.dumpQueryToWriter(usersQuery, dump.manager.Users())
+	intent := dump.manager.Users()
+	intent.OpenIntent(intent)
+	err = dump.dumpQueryToWriter(usersQuery, intent)
 	if err != nil {
 		return fmt.Errorf("error dumping db users: %v", err)
 	}
 
 	rolesQuery := session.DB("admin").C("system.roles").Find(dbQuery)
-	err = dump.dumpQueryToWriter(rolesQuery, dump.manager.Roles())
+	intent = dump.manager.Roles()
+	intent.OpenIntent(intent)
+	err = dump.dumpQueryToWriter(rolesQuery, intent)
 	if err != nil {
 		return fmt.Errorf("error dumping db roles: %v", err)
 	}
 
 	versionQuery := session.DB("admin").C("system.version").Find(nil)
-	err = dump.dumpQueryToWriter(versionQuery, dump.manager.AuthVersion())
+	intent = dump.manager.AuthVersion()
+	intent.OpenIntent(intent)
+	err = dump.dumpQueryToWriter(versionQuery, intent)
 	if err != nil {
 		return fmt.Errorf("error dumping db auth version: %v", err)
 	}
