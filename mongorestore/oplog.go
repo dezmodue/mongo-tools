@@ -24,7 +24,9 @@ func (restore *MongoRestore) RestoreOplog() error {
 		log.Log(log.Always, "no oplog.bson file in root of the dump directory, skipping oplog application")
 		return nil
 	}
-
+	if err := intent.OpenIntent(intent); err != nil {
+		return err
+	}
 	bsonSource := db.NewDecodedBSONSource(db.NewBSONSource(intent.BSONFile))
 	defer bsonSource.Close()
 
