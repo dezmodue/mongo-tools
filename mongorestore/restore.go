@@ -120,6 +120,10 @@ func (restore *MongoRestore) RestoreIntent(intent *intents.Intent) error {
 
 	// first create the collection with options from the metadata file
 	if intent.MetadataPath != "" {
+		err = intent.OpenMetadata(intent)
+		if err != nil {
+			return err
+		}
 		log.Logf(log.Always, "reading metadata file from %v", intent.MetadataPath)
 		jsonBytes, err := ioutil.ReadFile(intent.MetadataPath)
 		if err != nil {

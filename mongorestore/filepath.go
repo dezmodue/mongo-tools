@@ -42,6 +42,30 @@ func GetInfoFromFilename(filename string) (string, FileType) {
 	}
 }
 
+func openIntentFile(intent *intents.Intent) (err error) {
+	intent.BSONFile, err = os.Open(intent.BSONPath)
+	if err != nil {
+		return fmt.Errorf("error reading BSON file %v: %v", intent.BSONPath, err)
+	} else {
+		return nil
+	}
+}
+
+func openMetadataFile(intent *intents.Intent) (err error) {
+	intent.MetadataFile, err = os.Open(intent.MetadataPath)
+	if err != nil {
+		return fmt.Errorf("error reading Metadata file %v: %v", intent.MetadataPath, err)
+	} else {
+		return nil
+	}
+}
+
+func openStandardInput(intent *intents.Intent) error {
+	// I think that stdin should be duplicated in a cross platform fashion here.
+	intent.BSONFile = os.Stdin
+	return nil
+}
+
 // CreateAllIntents drills down into a dump folder, creating intents for all of
 // the databases and collections it finds.
 func (restore *MongoRestore) CreateAllIntents(dumpDir string) error {
@@ -66,11 +90,13 @@ func (restore *MongoRestore) CreateAllIntents(dumpDir string) error {
 					log.Log(log.DebugLow, "found oplog.bson file to replay")
 				}
 				foundOplog = true
-				restore.manager.Put(&intents.Intent{
-					C:        "oplog",
-					BSONPath: filepath.Join(dumpDir, entry.Name()),
-					Size:     entry.Size(),
-				})
+				oplogIntent := &intents.Intent{
+					C:          "oplog",
+					BSONPath:   filepath.Join(dumpDir, entry.Name()),
+					Size:       entry.Size(),
+					OpenIntent: openIntentFile,
+				}
+				restore.manager.Put(oplogIntent)
 			} else {
 				log.Logf(log.Always, `don't know what to do with file "%v", skipping...`,
 					filepath.Join(dumpDir, entry.Name()))
@@ -120,10 +146,11 @@ func (restore *MongoRestore) CreateIntentsForDB(db, dir string) error {
 					continue
 				}
 				intent := &intents.Intent{
-					DB:       db,
-					C:        collection,
-					Size:     entry.Size(),
-					BSONPath: filepath.Join(dir, entry.Name()),
+					DB:         db,
+					C:          collection,
+					Size:       entry.Size(),
+					BSONPath:   filepath.Join(dir, entry.Name()),
+					OpenIntent: openIntentFile,
 				}
 				log.Logf(log.Info, "found collection %v bson to restore", intent.Namespace())
 				restore.manager.Put(intent)
@@ -133,7 +160,9 @@ func (restore *MongoRestore) CreateIntentsForDB(db, dir string) error {
 					DB:           db,
 					C:            collection,
 					MetadataPath: filepath.Join(dir, entry.Name()),
+					OpenMetadata: openMetadataFile,
 				}
+
 				log.Logf(log.Info, "found collection %v metadata to restore", intent.Namespace())
 				restore.manager.Put(intent)
 			default:
@@ -169,9 +198,10 @@ func (restore *MongoRestore) CreateIntentForCollection(db, collection, fullpath 
 	// avoid actual file handling if we are using stdin
 	if restore.useStdin {
 		intent := &intents.Intent{
-			DB:       db,
-			C:        collection,
-			BSONPath: "-",
+			DB:         db,
+			C:          collection,
+			BSONPath:   "-",
+			OpenIntent: openStandardInput,
 		}
 		restore.manager.Put(intent)
 		return nil
@@ -193,10 +223,15 @@ func (restore *MongoRestore) CreateIntentForCollection(db, collection, fullpath 
 
 	// then create its intent
 	intent := &intents.Intent{
-		DB:       db,
-		C:        collection,
-		BSONPath: fullpath,
-		Size:     file.Size(),
+		DB:         db,
+		C:          collection,
+		BSONPath:   fullpath,
+		Size:       file.Size(),
+		OpenIntent: openIntentFile,
+	}
+
+	if err != nil {
+
 	}
 
 	// finally, check if it has a .metadata.json file in its folder
