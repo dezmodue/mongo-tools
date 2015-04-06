@@ -49,9 +49,8 @@ func openIntentFile(intent *intents.Intent) (err error) {
 	intent.BSONFile, err = os.Open(intent.BSONPath)
 	if err != nil {
 		return fmt.Errorf("error reading BSON file %v: %v", intent.BSONPath, err)
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func openMetadataFile(intent *intents.Intent) (err error) {
@@ -61,9 +60,8 @@ func openMetadataFile(intent *intents.Intent) (err error) {
 	intent.MetadataFile, err = os.Open(intent.MetadataPath)
 	if err != nil {
 		return fmt.Errorf("error reading Metadata file %v: %v", intent.MetadataPath, err)
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func openStandardInput(intent *intents.Intent) error {

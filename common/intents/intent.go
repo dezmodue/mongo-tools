@@ -271,7 +271,7 @@ func (manager *Manager) SystemIndexes(dbName string) *Intent {
 // SystemIndexes returns the dbs for which there are system.indexes
 func (manager *Manager) SystemIndexDBs() []string {
 	dbs := []string{}
-	for dbname, _ := range manager.indexIntents {
+	for dbname := range manager.indexIntents {
 		dbs = append(dbs, dbname)
 	}
 	return dbs
