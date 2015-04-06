@@ -26,7 +26,7 @@ type IndexDocumentFromDB struct {
 // dumpMetadataToWriter gets the metadata for a collection and writes it
 // in readable JSON format.
 func (dump *MongoDump) dumpMetadata(intent *intents.Intent) error {
-	err := intent.OpenMetadata(intent)
+	err := intent.MetadataFile.Open()
 	if err != nil {
 		return err
 	}

@@ -89,13 +89,18 @@ func (restore *MongoRestore) MetadataFromJSON(jsonBytes []byte) (bson.D, []Index
 	return meta.Options, meta.Indexes, nil
 }
 
-// IndexesFromBSON extracts index information from BSON files.
+// LoadIndexesFromBSON reads indexes from the index BSON files and
+// caches them in the MongoRestore object
 func (restore *MongoRestore) LoadIndexesFromBSON() error {
-	dbCollectionIndexes := make(map[string]map[string][]IndexDocument)
+
+	dbCollectionIndexes := make(map[string]collectionIndexes)
 
 	for _, dbname := range restore.manager.SystemIndexDBs() {
-		dbCollectionIndexes[dbname] = make(map[string][]IndexDocument)
-		restore.manager.SystemIndexes(dbname).OpenIntent(restore.manager.SystemIndexes(dbname))
+		dbCollectionIndexes[dbname] = make(collectionIndexes)
+		err := restore.manager.SystemIndexes(dbname).BSONFile.Open()
+		if err != nil {
+			return err
+		}
 		bsonSource := db.NewDecodedBSONSource(db.NewBSONSource(restore.manager.SystemIndexes(dbname).BSONFile))
 		defer bsonSource.Close()
 
@@ -110,7 +115,7 @@ func (restore *MongoRestore) LoadIndexesFromBSON() error {
 			return fmt.Errorf("error scanning system.indexes: %v", err)
 		}
 	}
-	restore.collectionIndexes = dbCollectionIndexes
+	restore.dbCollectionIndexes = dbCollectionIndexes
 	return nil
 }
 
@@ -287,7 +292,7 @@ func (restore *MongoRestore) RestoreUsersOrRoles(collectionType string, intent *
 		return fmt.Errorf("cannot use %v as a collection type in RestoreUsersOrRoles", collectionType)
 	}
 
-	err := intent.OpenIntent(intent)
+	err := intent.BSONFile.Open()
 	if err != nil {
 		return err
 	}
@@ -398,7 +403,7 @@ func (restore *MongoRestore) GetDumpAuthVersion() (int, error) {
 		return 1, nil
 	}
 
-	err := intent.OpenIntent(intent)
+	err := intent.BSONFile.Open()
 	if err != nil {
 		return 0, err
 	}

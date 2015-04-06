@@ -232,7 +232,7 @@ func (dump *MongoDump) Dump() error {
 	}
 
 	// IO Phase II
-	// nomral collections
+	// normal collections
 
 	// TODO, either remove this debug or improve the language
 	log.Logf(log.DebugHigh, "dump phase II: regular collections")
@@ -349,7 +349,7 @@ func (dump *MongoDump) DumpIntent(intent *intents.Intent) error {
 	if err != nil {
 		return err
 	}
-	err = intent.OpenIntent(intent)
+	err = intent.BSONFile.Open()
 	if err != nil {
 		return err
 	}
@@ -496,7 +496,7 @@ func (dump *MongoDump) DumpUsersAndRolesForDB(db string) error {
 	dbQuery := bson.M{"db": db}
 	usersQuery := session.DB("admin").C("system.users").Find(dbQuery)
 	intent := dump.manager.Users()
-	intent.OpenIntent(intent)
+	intent.BSONFile.Open()
 	err = dump.dumpQueryToWriter(usersQuery, intent)
 	if err != nil {
 		return fmt.Errorf("error dumping db users: %v", err)
@@ -504,7 +504,7 @@ func (dump *MongoDump) DumpUsersAndRolesForDB(db string) error {
 
 	rolesQuery := session.DB("admin").C("system.roles").Find(dbQuery)
 	intent = dump.manager.Roles()
-	intent.OpenIntent(intent)
+	intent.BSONFile.Open()
 	err = dump.dumpQueryToWriter(rolesQuery, intent)
 	if err != nil {
 		return fmt.Errorf("error dumping db roles: %v", err)
@@ -512,7 +512,7 @@ func (dump *MongoDump) DumpUsersAndRolesForDB(db string) error {
 
 	versionQuery := session.DB("admin").C("system.version").Find(nil)
 	intent = dump.manager.AuthVersion()
-	intent.OpenIntent(intent)
+	intent.BSONFile.Open()
 	err = dump.dumpQueryToWriter(versionQuery, intent)
 	if err != nil {
 		return fmt.Errorf("error dumping db auth version: %v", err)
@@ -563,7 +563,7 @@ func (dump *MongoDump) DumpSystemIndexes() error {
 func (dump *MongoDump) DumpMetadata() error {
 	allIntents := dump.manager.Intents()
 	for _, intent := range allIntents {
-		if intent.OpenMetadata != nil {
+		if intent.MetadataFile != nil {
 			err := dump.dumpMetadata(intent)
 			if err != nil {
 				return err

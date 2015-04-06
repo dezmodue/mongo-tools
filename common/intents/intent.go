@@ -7,6 +7,11 @@ import (
 	"sync"
 )
 
+type ReadWriteCloseOpener interface {
+	io.ReadWriteCloser
+	Open() error
+}
+
 // mongorestore first scans the directory to generate a list
 // of all files to restore and what they map to. TODO comments
 type Intent struct {
@@ -16,12 +21,10 @@ type Intent struct {
 
 	// File locations as absolute paths
 	BSONPath     string
-	BSONFile     io.ReadWriteCloser
+	BSONFile     ReadWriteCloseOpener
 	BSONSize     int64
 	MetadataPath string
-	MetadataFile io.ReadWriteCloser
-	OpenIntent   func(*Intent) error
-	OpenMetadata func(*Intent) error
+	MetadataFile ReadWriteCloseOpener
 
 	// File/collection size, for some prioritizer implementations.
 	// Units don't matter as long as they are consistent for a given use case.
@@ -176,9 +179,6 @@ func (manager *Manager) Put(intent *Intent) {
 		if existing.BSONFile == nil {
 			existing.BSONFile = intent.BSONFile
 		}
-		if existing.OpenIntent == nil {
-			existing.OpenIntent = intent.OpenIntent
-		}
 		if existing.Size == 0 {
 			existing.Size = intent.Size
 		}
@@ -187,9 +187,6 @@ func (manager *Manager) Put(intent *Intent) {
 		}
 		if existing.MetadataFile == nil {
 			existing.MetadataFile = intent.MetadataFile
-		}
-		if existing.OpenMetadata == nil {
-			existing.OpenMetadata = intent.OpenMetadata
 		}
 		return
 	}
@@ -268,13 +265,13 @@ func (manager *Manager) SystemIndexes(dbName string) *Intent {
 	return manager.indexIntents[dbName]
 }
 
-// SystemIndexes returns the dbs for which there are system.indexes
+// SystemIndexes returns the databases for which there are system.indexes
 func (manager *Manager) SystemIndexDBs() []string {
-	dbs := []string{}
+	databases := []string{}
 	for dbname := range manager.indexIntents {
-		dbs = append(dbs, dbname)
+		databases = append(databases, dbname)
 	}
-	return dbs
+	return databases
 }
 
 // Users returns the intent of the users collection to restore, a special case

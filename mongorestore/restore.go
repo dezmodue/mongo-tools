@@ -108,8 +108,8 @@ func (restore *MongoRestore) RestoreIntent(intent *intents.Intent) error {
 
 	// get indexes from system.indexes dump if we have it but don't have metadata files
 	if intent.MetadataPath == "" {
-		if _, ok := restore.collectionIndexes[intent.DB]; ok {
-			if indexes, ok = restore.collectionIndexes[intent.DB][intent.C]; ok {
+		if _, ok := restore.dbCollectionIndexes[intent.DB]; ok {
+			if indexes, ok = restore.dbCollectionIndexes[intent.DB][intent.C]; ok {
 				log.Logf(log.Always, "no metadata file; falling back to system.indexes")
 			}
 		}
@@ -117,7 +117,7 @@ func (restore *MongoRestore) RestoreIntent(intent *intents.Intent) error {
 
 	// first create the collection with options from the metadata file
 	if intent.MetadataPath != "" {
-		err = intent.OpenMetadata(intent)
+		err = intent.MetadataFile.Open()
 		if err != nil {
 			return err
 		}
@@ -151,7 +151,7 @@ func (restore *MongoRestore) RestoreIntent(intent *intents.Intent) error {
 
 	// then do bson
 	if intent.BSONPath != "" {
-		err = intent.OpenIntent(intent)
+		err = intent.BSONFile.Open()
 		if err != nil {
 			return err
 		}

@@ -46,8 +46,10 @@ type MongoRestore struct {
 	knownCollectionsMutex sync.Mutex
 
 	// indexes belonging to dbs and collections
-	collectionIndexes map[string]map[string][]IndexDocument
+	dbCollectionIndexes map[string]collectionIndexes
 }
+
+type collectionIndexes map[string][]IndexDocument
 
 // ParseAndValidateOptions returns a non-nil error if user-supplied options are invalid.
 func (restore *MongoRestore) ParseAndValidateOptions() error {
