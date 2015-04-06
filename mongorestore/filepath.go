@@ -173,15 +173,15 @@ func (restore *MongoRestore) CreateIntentsForDB(db, dir string) error {
 							"has .metadata.json files", db)
 					continue
 				}
-				bsonIntent := &intents.Intent{
+				intent := &intents.Intent{
 					DB:       db,
 					C:        collection,
 					Size:     entry.Size(),
 					BSONPath: filepath.Join(dir, entry.Name()),
 				}
-				bsonIntent.BSONFile = &bsonFileFile{intent: bsonIntent}
-				log.Logf(log.Info, "found collection %v bson to restore", bsonIntent.Namespace())
-				restore.manager.Put(bsonIntent)
+				intent.BSONFile = &bsonFileFile{intent: intent}
+				log.Logf(log.Info, "found collection %v bson to restore", intent.Namespace())
+				restore.manager.Put(intent)
 			case MetadataFileType:
 				usesMetadataFiles = true
 				intent := &intents.Intent{

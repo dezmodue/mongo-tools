@@ -97,13 +97,13 @@ func TestGetDumpAuthVersion(t *testing.T) {
 
 			Convey("auth version 3 should be detected", func() {
 				restore.manager = intents.NewCategorizingIntentManager()
-				intent := intents.Intent{
+				intent := &intents.Intent{
 					DB:       "admin",
 					C:        "system.version",
 					BSONPath: "testdata/auth_version_3.bson",
 				}
-				intent.BSONFile = &bsonFileFile{Intent: intent}
-				restore.manager.Put(&intent)
+				intent.BSONFile = &bsonFileFile{intent: intent}
+				restore.manager.Put(intent)
 				version, err := restore.GetDumpAuthVersion()
 				So(err, ShouldBeNil)
 				So(version, ShouldEqual, 3)
@@ -116,7 +116,7 @@ func TestGetDumpAuthVersion(t *testing.T) {
 					C:        "system.version",
 					BSONPath: "testdata/auth_version_5.bson",
 				}
-				intent.BSONFile = &bsonFileFile{Intent: intent}
+				intent.BSONFile = &bsonFileFile{intent: intent}
 				restore.manager.Put(intent)
 				version, err := restore.GetDumpAuthVersion()
 				So(err, ShouldBeNil)
@@ -150,7 +150,7 @@ func TestGetDumpAuthVersion(t *testing.T) {
 					C:        "system.version",
 					BSONPath: "testdata/auth_version_3.bson",
 				}
-				intent.BSONFile = &bsonFileFile{Intent: intent}
+				intent.BSONFile = &bsonFileFile{intent: intent}
 				restore.manager.Put(intent)
 				version, err := restore.GetDumpAuthVersion()
 				So(err, ShouldBeNil)
@@ -164,7 +164,7 @@ func TestGetDumpAuthVersion(t *testing.T) {
 					C:        "system.version",
 					BSONPath: "testdata/auth_version_5.bson",
 				}
-				intent.BSONFile = &bsonFileFile{Intent: intent}
+				intent.BSONFile = &bsonFileFile{intent: intent}
 				restore.manager.Put(intent)
 				version, err := restore.GetDumpAuthVersion()
 				So(err, ShouldBeNil)
