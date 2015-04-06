@@ -8,8 +8,9 @@ import (
 const minBSONSize = 4 + 1 // an empty bson document should be exactly five bytes long
 
 type ParserConsumer interface {
-	HandleOutOfBandBSON(parse.buf, parse.length)
-	DispatchBSON(parse.buf, parse.length)
+	HandleOutOfBandBSON([]byte, int) error
+	DispatchBSON([]byte, int) error
+	End() error
 }
 
 type Parser struct {
@@ -49,7 +50,8 @@ func (parse *Parser) run() (err error) {
 	for {
 		delimiter, err := parse.readBSONOrDelimiter()
 		if err == EOF {
-			return nil
+			err = parse.End()
+			return err
 		}
 		if err != nil {
 			return err
