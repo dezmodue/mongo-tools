@@ -89,14 +89,14 @@ func TestGetDumpAuthVersion(t *testing.T) {
 				ToolOptions:  &commonOpts.ToolOptions{},
 			}
 			Convey("auth version 1 should be detected", func() {
-				restore.manager = intents.NewCategorizingIntentManager()
+				restore.manager = intents.NewIntentManager()
 				version, err := restore.GetDumpAuthVersion()
 				So(err, ShouldBeNil)
 				So(version, ShouldEqual, 1)
 			})
 
 			Convey("auth version 3 should be detected", func() {
-				restore.manager = intents.NewCategorizingIntentManager()
+				restore.manager = intents.NewIntentManager()
 				intent := &intents.Intent{
 					DB:       "admin",
 					C:        "system.version",
@@ -110,7 +110,7 @@ func TestGetDumpAuthVersion(t *testing.T) {
 			})
 
 			Convey("auth version 5 should be detected", func() {
-				restore.manager = intents.NewCategorizingIntentManager()
+				restore.manager = intents.NewIntentManager()
 				intent := &intents.Intent{
 					DB:       "admin",
 					C:        "system.version",
@@ -137,14 +137,14 @@ func TestGetDumpAuthVersion(t *testing.T) {
 			}
 
 			Convey("auth version 3 should be detected when no file exists", func() {
-				restore.manager = intents.NewCategorizingIntentManager()
+				restore.manager = intents.NewIntentManager()
 				version, err := restore.GetDumpAuthVersion()
 				So(err, ShouldBeNil)
 				So(version, ShouldEqual, 3)
 			})
 
 			Convey("auth version 3 should be detected when a version 3 file exists", func() {
-				restore.manager = intents.NewCategorizingIntentManager()
+				restore.manager = intents.NewIntentManager()
 				intent := &intents.Intent{
 					DB:       "admin",
 					C:        "system.version",
@@ -158,7 +158,7 @@ func TestGetDumpAuthVersion(t *testing.T) {
 			})
 
 			Convey("auth version 5 should be detected", func() {
-				restore.manager = intents.NewCategorizingIntentManager()
+				restore.manager = intents.NewIntentManager()
 				intent := &intents.Intent{
 					DB:       "admin",
 					C:        "system.version",

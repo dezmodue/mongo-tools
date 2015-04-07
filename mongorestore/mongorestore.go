@@ -153,7 +153,7 @@ func (restore *MongoRestore) Restore() error {
 	}
 
 	// Build up all intents to be restored
-	restore.manager = intents.NewCategorizingIntentManager()
+	restore.manager = intents.NewIntentManager()
 
 	// handle cases where the user passes in a file instead of a directory
 	if isBSON(restore.TargetDirectory) {

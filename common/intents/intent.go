@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-type ReadWriteCloseOpener interface {
+type file interface {
 	io.ReadWriteCloser
 	Open() error
 }
@@ -21,10 +21,10 @@ type Intent struct {
 
 	// File locations as absolute paths
 	BSONPath     string
-	BSONFile     ReadWriteCloseOpener
+	BSONFile     file
 	BSONSize     int64
 	MetadataPath string
-	MetadataFile ReadWriteCloseOpener
+	MetadataFile file
 
 	// File/collection size, for some prioritizer implementations.
 	// Units don't matter as long as they are consistent for a given use case.
@@ -76,10 +76,6 @@ func (it *Intent) IsSystemIndexes() bool {
 // Intent Manager
 
 type Manager struct {
-	// for handling more complex restore logic. Stores special
-	// collections like roles/users separate from most collection intents
-	useCategories bool
-
 	// map for merging metadata with BSON intents
 	intents map[string]*Intent
 
@@ -103,18 +99,12 @@ type Manager struct {
 	indexIntents  map[string]*Intent
 }
 
-func NewCategorizingIntentManager() *Manager {
-	manager := NewIntentManager()
-	manager.useCategories = true
-	manager.indexIntents = map[string]*Intent{}
-	return manager
-}
-
 func NewIntentManager() *Manager {
 	return &Manager{
 		intents:                 map[string]*Intent{},
 		intentsByDiscoveryOrder: []*Intent{},
 		priotitizerLock:         &sync.Mutex{},
+		indexIntents:            map[string]*Intent{},
 	}
 }
 
@@ -138,33 +128,31 @@ func (manager *Manager) Put(intent *Intent) {
 	}
 
 	// bucket special-case collections
-	if manager.useCategories {
-		if intent.IsOplog() {
-			manager.oplogIntent = intent
-			return
+	if intent.IsOplog() {
+		manager.oplogIntent = intent
+		return
+	}
+	if intent.IsSystemIndexes() {
+		manager.indexIntents[intent.DB] = intent
+		return
+	}
+	if intent.IsUsers() {
+		if intent.BSONPath != "" {
+			manager.usersIntent = intent
 		}
-		if intent.IsSystemIndexes() {
-			manager.indexIntents[intent.DB] = intent
-			return
+		return
+	}
+	if intent.IsRoles() {
+		if intent.BSONPath != "" {
+			manager.rolesIntent = intent
 		}
-		if intent.IsUsers() {
-			if intent.BSONPath != "" {
-				manager.usersIntent = intent
-			}
-			return
+		return
+	}
+	if intent.IsAuthVersion() {
+		if intent.BSONPath != "" {
+			manager.versionIntent = intent
 		}
-		if intent.IsRoles() {
-			if intent.BSONPath != "" {
-				manager.rolesIntent = intent
-			}
-			return
-		}
-		if intent.IsAuthVersion() {
-			if intent.BSONPath != "" {
-				manager.versionIntent = intent
-			}
-			return
-		}
+		return
 	}
 
 	// BSON and metadata files for the same collection are merged
@@ -196,7 +184,7 @@ func (manager *Manager) Put(intent *Intent) {
 	manager.intentsByDiscoveryOrder = append(manager.intentsByDiscoveryOrder, intent)
 }
 
-// returns a slice containing all of the intents in the manager
+// Intents returns a slice containing all of the intents in the manager
 // Intents() is not thread safe
 func (manager *Manager) Intents() []*Intent {
 	allIntents := []*Intent{}

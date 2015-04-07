@@ -103,8 +103,9 @@ func (dump *MongoDump) CreateOplogIntents() error {
 	return nil
 }
 
-// CreateOtherIntents create intents for irregular collections
-// puts it into the intent manager.
+// CreateUsersRolesVersionIntentsForDB create intents to be written in to the specific
+// collection folder, for the users, roles and version admin database collections
+// And then it adds the intents in to the manager
 func (dump *MongoDump) CreateUsersRolesVersionIntentsForDB(db string) error {
 
 	outDir := filepath.Join(dump.OutputOptions.Out, db)

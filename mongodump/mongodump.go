@@ -98,7 +98,7 @@ func (dump *MongoDump) Init() error {
 	if dump.OutputOptions.Repair && dump.isMongos {
 		return fmt.Errorf("--repair flag cannot be used on a mongos")
 	}
-	dump.manager = intents.NewCategorizingIntentManager()
+	dump.manager = intents.NewIntentManager()
 	dump.progressManager = progress.NewProgressBarManager(log.Writer(0), progressBarWaitTime)
 	return nil
 }
@@ -197,6 +197,12 @@ func (dump *MongoDump) Dump() error {
 		return fmt.Errorf("error dumping system indexes: %v", err)
 	}
 
+	if dump.ToolOptions.DB == "admin" || dump.ToolOptions.DB == "" {
+		err = dump.DumpUsersAndRoles()
+		if err != nil {
+			return fmt.Errorf("error dumping users and roles: %v", err)
+		}
+	}
 	if dump.OutputOptions.DumpDBUsersAndRoles {
 		log.Logf(log.Always, "dumping users and roles for %v", dump.ToolOptions.DB)
 		if dump.ToolOptions.DB == "admin" {
@@ -206,12 +212,6 @@ func (dump *MongoDump) Dump() error {
 			if err != nil {
 				return fmt.Errorf("error dumping users and roles for db: %v", err)
 			}
-		}
-	}
-	if dump.ToolOptions.DB == "admin" || dump.ToolOptions.DB == "" {
-		err = dump.DumpUsersAndRoles()
-		if err != nil {
-			return fmt.Errorf("error dumping users and roles: %v", err)
 		}
 	}
 
@@ -349,16 +349,18 @@ func (dump *MongoDump) DumpIntent(intent *intents.Intent) error {
 	if err != nil {
 		return err
 	}
-	err = intent.BSONFile.Open()
-	if err != nil {
-		return err
-	}
 	session.SetSocketTimeout(0)
 	defer session.Close()
 	// in mgo, setting prefetch = 1.0 causes the driver to make requests for
 	// more results as soon as results are returned. This effectively
 	// duplicates the behavior of an exhaust cursor.
 	session.SetPrefetch(1.0)
+
+	err = intent.BSONFile.Open()
+	if err != nil {
+		return err
+	}
+	defer intent.BSONFile.Close()
 
 	var findQuery *mgo.Query
 	switch {
@@ -376,8 +378,6 @@ func (dump *MongoDump) DumpIntent(intent *intents.Intent) error {
 		log.Logf(log.Always, "writing %v to stdout", intent.Namespace())
 		return dump.dumpQueryToWriter(findQuery, intent)
 	}
-
-	defer intent.BSONFile.Close()
 
 	if !dump.OutputOptions.Repair {
 		log.Logf(log.Always, "writing %v to %v", intent.Namespace(), intent.BSONPath)
@@ -497,6 +497,7 @@ func (dump *MongoDump) DumpUsersAndRolesForDB(db string) error {
 	usersQuery := session.DB("admin").C("system.users").Find(dbQuery)
 	intent := dump.manager.Users()
 	intent.BSONFile.Open()
+	defer intent.BSONFile.Close()
 	err = dump.dumpQueryToWriter(usersQuery, intent)
 	if err != nil {
 		return fmt.Errorf("error dumping db users: %v", err)
@@ -505,6 +506,7 @@ func (dump *MongoDump) DumpUsersAndRolesForDB(db string) error {
 	rolesQuery := session.DB("admin").C("system.roles").Find(dbQuery)
 	intent = dump.manager.Roles()
 	intent.BSONFile.Open()
+	defer intent.BSONFile.Close()
 	err = dump.dumpQueryToWriter(rolesQuery, intent)
 	if err != nil {
 		return fmt.Errorf("error dumping db roles: %v", err)
@@ -513,6 +515,7 @@ func (dump *MongoDump) DumpUsersAndRolesForDB(db string) error {
 	versionQuery := session.DB("admin").C("system.version").Find(nil)
 	intent = dump.manager.AuthVersion()
 	intent.BSONFile.Open()
+	defer intent.BSONFile.Close()
 	err = dump.dumpQueryToWriter(versionQuery, intent)
 	if err != nil {
 		return fmt.Errorf("error dumping db auth version: %v", err)

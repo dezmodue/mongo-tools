@@ -121,6 +121,7 @@ func (restore *MongoRestore) RestoreIntent(intent *intents.Intent) error {
 		if err != nil {
 			return err
 		}
+		defer intent.MetadataFile.Close()
 		log.Logf(log.Always, "reading metadata file from %v", intent.MetadataPath)
 		metadata, err := ioutil.ReadAll(intent.MetadataFile)
 		if err != nil {
@@ -155,6 +156,7 @@ func (restore *MongoRestore) RestoreIntent(intent *intents.Intent) error {
 		if err != nil {
 			return err
 		}
+		defer intent.BSONFile.Close()
 
 		log.Logf(log.Always, "restoring %v from file %v", intent.Namespace(), intent.BSONPath)
 		var size int64

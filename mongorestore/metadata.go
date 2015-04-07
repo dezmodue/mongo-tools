@@ -90,18 +90,20 @@ func (restore *MongoRestore) MetadataFromJSON(jsonBytes []byte) (bson.D, []Index
 }
 
 // LoadIndexesFromBSON reads indexes from the index BSON files and
-// caches them in the MongoRestore object
+// caches them in the MongoRestore object.
 func (restore *MongoRestore) LoadIndexesFromBSON() error {
 
 	dbCollectionIndexes := make(map[string]collectionIndexes)
 
 	for _, dbname := range restore.manager.SystemIndexDBs() {
 		dbCollectionIndexes[dbname] = make(collectionIndexes)
-		err := restore.manager.SystemIndexes(dbname).BSONFile.Open()
+		intent := restore.manager.SystemIndexes(dbname)
+		err := intent.BSONFile.Open()
 		if err != nil {
 			return err
 		}
-		bsonSource := db.NewDecodedBSONSource(db.NewBSONSource(restore.manager.SystemIndexes(dbname).BSONFile))
+		defer intent.BSONFile.Close()
+		bsonSource := db.NewDecodedBSONSource(db.NewBSONSource(intent.BSONFile))
 		defer bsonSource.Close()
 
 		// iterate over stored indexes, saving all that match the collection
@@ -296,6 +298,7 @@ func (restore *MongoRestore) RestoreUsersOrRoles(collectionType string, intent *
 	if err != nil {
 		return err
 	}
+	defer intent.BSONFile.Close()
 	bsonSource := db.NewDecodedBSONSource(db.NewBSONSource(intent.BSONFile))
 	defer bsonSource.Close()
 
@@ -407,6 +410,7 @@ func (restore *MongoRestore) GetDumpAuthVersion() (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer intent.BSONFile.Close()
 	bsonSource := db.NewDecodedBSONSource(db.NewBSONSource(intent.BSONFile))
 	defer bsonSource.Close()
 

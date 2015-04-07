@@ -30,6 +30,7 @@ func (dump *MongoDump) dumpMetadata(intent *intents.Intent) error {
 	if err != nil {
 		return err
 	}
+	defer intent.MetadataFile.Close()
 	// make a buffered writer for nicer disk i/o
 	w := bufio.NewWriter(intent.MetadataFile)
 

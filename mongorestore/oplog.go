@@ -27,6 +27,7 @@ func (restore *MongoRestore) RestoreOplog() error {
 	if err := intent.BSONFile.Open(); err != nil {
 		return err
 	}
+	defer intent.BSONFile.Close()
 	bsonSource := db.NewDecodedBSONSource(db.NewBSONSource(intent.BSONFile))
 	defer bsonSource.Close()
 
