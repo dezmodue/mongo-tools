@@ -8,8 +8,8 @@ import (
 const minBSONSize = 4 + 1 // an empty bson document should be exactly five bytes long
 
 type ParserConsumer interface {
-	HandleOutOfBandBSON([]byte, int) error
-	DispatchBSON([]byte, int) error
+	HandleOutOfBandBSON([]byte) error
+	DispatchBSON([]byte) error
 	End() error
 }
 
@@ -18,6 +18,13 @@ type Parser struct {
 	consumer ParserConsumer
 	buf      [db.MaxBSONSize]byte
 	length   int
+}
+
+func NewArchiveParser(in io.Reader, consumer ParserConsumer) {
+	return &Parser{
+		in:       in,
+		consumer: consumer,
+	}
 }
 
 func (parse *Parser) readBSONOrDelimiter() (int, bool, error) {
@@ -38,6 +45,8 @@ func (parse *Parser) readBSONOrDelimiter() (int, bool, error) {
 	if size < minBSONSize || size > db.MaxBSONSize {
 		return false, fmt.Errorf("Corruption found in archive; %v is neither a valid bson length nor a archive delimiter", size)
 	}
+	// TODO Because we're reusing this same buffer for all of our IO, we are basically guaranteeing that we'll copy the bytes twice
+	// At some point we should fix this. It's slightly complex, because we'll need consumer methods closing one buffer and acquiring another
 	bsonLength, err := io.ReadAtLeast(parse.in, buf[4:size], size-4)
 	if err != nil {
 		return false, err
