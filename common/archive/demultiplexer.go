@@ -7,12 +7,6 @@ import (
 
 var errorSuffix string = "Dump archive format error"
 
-type collectionHeader struct {
-	Database   string `bson:"db"`
-	Collection string `bson:"collection"`
-	EOF        bool   `bson:"EOF",omitempty`
-}
-
 type Demultiplexer struct {
 	in                  io.Reader
 	outs                map[string]<-chan []byte
@@ -57,11 +51,11 @@ func (dmx *Demultiplexer) DispatchBSON(buf []byte) error {
 }
 
 type DemuxOut struct {
-	in chan<- []byte
+	out chan<- []byte
 }
 
 func (dmxOut *DemuxOut) Read(p []byte) (int, error) {
-	p, ok := <-dmxOut.in
+	p, ok := <-dmxOut.out
 	if !ok {
 		return 0, oi.EOF
 	}
