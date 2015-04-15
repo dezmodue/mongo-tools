@@ -50,11 +50,14 @@ func (parse *Parser) readBSONOrDelimiter() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if parse.buf[size-1] != 0x00 {
+		return false, fmt.Errorf("Corruption found in archive; bson doesn't end with a null byte")
+	}
 	parse.length = int(size)
 	return false, nil
 }
 
-func (parse *Parser) run() (err error) {
+func (parse *Parser) Run() (err error) {
 	for {
 		delimiter, err := parse.readBSONOrDelimiter()
 		if err == io.EOF {
@@ -72,7 +75,7 @@ func (parse *Parser) run() (err error) {
 			if delimiter {
 				return fmt.Errorf("Error parsing archive; consecutive delimiters are not allowed")
 			}
-			err = parse.handleOutOfBandBSON()
+			err = parse.consumer.HandleOutOfBandBSON(parse.buf[:parse.length])
 			if err != nil {
 				return err
 			}
@@ -83,12 +86,4 @@ func (parse *Parser) run() (err error) {
 			}
 		}
 	}
-}
-
-func (parse *Parser) handleOutOfBandBSON() error {
-	return parse.consumer.HandleOutOfBandBSON(parse.buf[:parse.length])
-}
-
-func (parse *Parser) dispatchBson() error {
-	return parse.consumer.DispatchBSON(parse.buf[:parse.length])
 }

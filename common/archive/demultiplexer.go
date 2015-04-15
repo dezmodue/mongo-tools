@@ -18,7 +18,7 @@ type Demultiplexer struct {
 
 func (dmx *Demultiplexer) run() error {
 	parse := NewArchiveParser(dmx.in, dmx)
-	return parse.run()
+	return parse.Run()
 }
 
 func (dmx *Demultiplexer) HandleOutOfBandBSON(buf []byte) error {
