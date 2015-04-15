@@ -1,7 +1,9 @@
 package archive
 
 import (
-	"encoding/bson"
+	"fmt"
+	"github.com/mongodb/mongo-tools/common/db"
+	"gopkg.in/mgo.v2/bson"
 	"io"
 )
 
@@ -9,7 +11,7 @@ var errorSuffix string = "Dump archive format error"
 
 type Demultiplexer struct {
 	in                  io.Reader
-	outs                map[string]<-chan []byte
+	outs                map[string]chan<- []byte
 	currentDBCollection string
 	buf                 [db.MaxBSONSize]byte
 }
@@ -20,7 +22,7 @@ func (dmx *Demultiplexer) run() error {
 }
 
 func (dmx *Demultiplexer) HandleOutOfBandBSON(buf []byte) error {
-	colHeader := collectionHeader{}
+	colHeader := CollectionHeader{}
 	err := bson.Unmarshal(buf, &colHeader)
 	if err != nil {
 		return fmt.Errorf("%v; out of band bson doesn't unmarshal as a collection header: (%v)", errorSuffix, err)
@@ -35,29 +37,34 @@ func (dmx *Demultiplexer) HandleOutOfBandBSON(buf []byte) error {
 	if _, ok := dmx.outs[dmx.currentDBCollection]; !ok {
 		return fmt.Errorf("%v; collection header specifies db/collection that shouldn't be in the archive, or is already closed")
 	}
-	if dmx.EOF {
+	if colHeader.EOF {
 		close(dmx.outs[dmx.currentDBCollection])
 		delete(dmx.outs, dmx.currentDBCollection)
 	}
 	return nil
 }
 
+func (dmx *Demultiplexer) End() error {
+	//TODO, check that the outs are all closed here and error if they are not
+	return nil
+}
+
 func (dmx *Demultiplexer) DispatchBSON(buf []byte) error {
-	if currentDBCollection == "" {
+	if dmx.currentDBCollection == "" {
 		return fmt.Errorf("%v; collection data without a collection header")
 	}
-	outs[currentDBCollection] <- buf
+	dmx.outs[dmx.currentDBCollection] <- buf
 	return nil
 }
 
 type DemuxOut struct {
-	out chan<- []byte
+	out <-chan []byte
 }
 
 func (dmxOut *DemuxOut) Read(p []byte) (int, error) {
 	p, ok := <-dmxOut.out
 	if !ok {
-		return 0, oi.EOF
+		return 0, io.EOF
 	}
 	return len(p), nil
 }
@@ -69,5 +76,5 @@ func (dmxOut *DemuxOut) Open() error {
 	return nil
 }
 func (dmxOut *DemuxOut) Write([]byte) (int, error) {
-	return nil
+	return 0, nil
 }

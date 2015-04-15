@@ -1,11 +1,10 @@
 package archive
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"fmt"
+	"github.com/mongodb/mongo-tools/common/db"
 	"io"
 )
-
-const minBSONSize = 4 + 1 // an empty bson document should be exactly five bytes long
 
 type ParserConsumer interface {
 	HandleOutOfBandBSON([]byte) error
@@ -20,24 +19,24 @@ type Parser struct {
 	length   int
 }
 
-func NewArchiveParser(in io.Reader, consumer ParserConsumer) {
+func NewArchiveParser(in io.Reader, consumer ParserConsumer) *Parser {
 	return &Parser{
 		in:       in,
 		consumer: consumer,
 	}
 }
 
-func (parse *Parser) readBSONOrDelimiter() (int, bool, error) {
+func (parse *Parser) readBSONOrDelimiter() (bool, error) {
 	parse.length = 0
-	_, err := io.ReadAtLeast(parse.in, buf[0:4], 4)
+	_, err := io.ReadAtLeast(parse.in, parse.buf[0:4], 4)
 	if err != nil {
 		return false, err
 	}
 	size := int32(
-		(uint32(buf[0]) << 0) |
-			(uint32(buf[1]) << 8) |
-			(uint32(buf[2]) << 16) |
-			(uint32(buf[3]) << 24),
+		(uint32(parse.buf[0]) << 0) |
+			(uint32(parse.buf[1]) << 8) |
+			(uint32(parse.buf[2]) << 16) |
+			(uint32(parse.buf[3]) << 24),
 	)
 	if size == delimiter {
 		return true, nil
@@ -47,19 +46,19 @@ func (parse *Parser) readBSONOrDelimiter() (int, bool, error) {
 	}
 	// TODO Because we're reusing this same buffer for all of our IO, we are basically guaranteeing that we'll copy the bytes twice
 	// At some point we should fix this. It's slightly complex, because we'll need consumer methods closing one buffer and acquiring another
-	bsonLength, err := io.ReadAtLeast(parse.in, buf[4:size], size-4)
+	_, err = io.ReadAtLeast(parse.in, parse.buf[4:size], int(size)-4)
 	if err != nil {
 		return false, err
 	}
-	parse.length = size
+	parse.length = int(size)
 	return false, nil
 }
 
 func (parse *Parser) run() (err error) {
 	for {
 		delimiter, err := parse.readBSONOrDelimiter()
-		if err == EOF {
-			err = parse.End()
+		if err == io.EOF {
+			err = parse.consumer.End()
 			return err
 		}
 		if err != nil {
@@ -78,7 +77,7 @@ func (parse *Parser) run() (err error) {
 				return err
 			}
 		} else {
-			err = parse.dispatchBSON()
+			err = parse.consumer.DispatchBSON(parse.buf[:parse.length])
 			if err != nil {
 				return err
 			}
@@ -87,9 +86,9 @@ func (parse *Parser) run() (err error) {
 }
 
 func (parse *Parser) handleOutOfBandBSON() error {
-	return parse.consumer.HandleOutOfBandBSON(parse.buf, parse.length)
+	return parse.consumer.HandleOutOfBandBSON(parse.buf[:parse.length])
 }
 
 func (parse *Parser) dispatchBson() error {
-	return parse.consumer.DispatchBSON(parse.buf, parse.length)
+	return parse.consumer.DispatchBSON(parse.buf[:parse.length])
 }

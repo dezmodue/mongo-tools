@@ -1,7 +1,12 @@
 package archive
 
 import (
-	"mgo/bson"
+	"fmt"
+	"github.com/mongodb/mongo-tools/common/db"
+	"gopkg.in/mgo.v2/bson"
+	"io"
+	"reflect"
+	"strings"
 	"sync"
 )
 
@@ -15,6 +20,7 @@ type Multiplexer struct {
 }
 
 func (mux *Multiplexer) run() (err error) {
+	var delimiterBytes []byte = []byte{0xFF, 0xFF, 0xFF, 0xFF} // TODO, rectify this with delimiter
 	for {
 		selectCases, selectCasesDBCollection := mux.getSelectCases()
 		if len(selectCases) == 0 {
@@ -23,28 +29,36 @@ func (mux *Multiplexer) run() (err error) {
 		}
 		index, value, ok := reflect.Select(selectCases)
 		if !ok {
-			namespaceParts := SplitN(mux.selectCasesDBCollection[index], ".", 2)
 			_, err = mux.out.Write(delimiterBytes)
 			if err != nil {
 				return err
 			}
-			_, err = mux.out.Write(bson.Marshal(CollectionHeader{Database: namespaceParts[0], Collection: namespaceParts[1], EOF: true}))
+			dbCollectionParts := strings.SplitN(mux.selectCasesDBCollection[index], ".", 2)
+			eofHeader, err := bson.Marshal(CollectionHeader{Database: dbCollectionParts[0], Collection: dbCollectionParts[1], EOF: true})
+			if err != nil {
+				return err
+			}
+			_, err = mux.out.Write(eofHeader)
 			if err != nil {
 				return err
 			}
 			mux.currentDBCollection = ""
 		} else {
-			if mux.selectCasesDBCollection[index] != mux.currentDBCollection {
-				namespaceParts := SplitN(mux.selectCasesDBCollection[index], ".", 2)
+			if selectCasesDBCollection[index] != mux.currentDBCollection {
 				_, err = mux.out.Write(delimiterBytes)
 				if err != nil {
 					return err
 				}
-				_, err = mux.out.Write(bson.Marshal(CollectionHeader{Database: namespaceParts[0], Collection: namespaceParts[1]}))
+				dbCollectionParts := strings.SplitN(selectCasesDBCollection[index], ".", 2)
+				header, err := bson.Marshal(CollectionHeader{Database: dbCollectionParts[0], Collection: dbCollectionParts[1]})
 				if err != nil {
 					return err
 				}
-				mux.currentDBCollection = mux.selectCasesDBCollection[index]
+				_, err = mux.out.Write(header)
+				if err != nil {
+					return err
+				}
+				mux.currentDBCollection = selectCasesDBCollection[index]
 			}
 			bsonBytes, ok := value.Interface().([]byte)
 			if !ok {
@@ -58,10 +72,10 @@ func (mux *Multiplexer) run() (err error) {
 	}
 }
 
-func (mux *Multiplexer) getSelectCases() []reflect.SelectCase {
+func (mux *Multiplexer) getSelectCases() ([]reflect.SelectCase, []string) {
 	mux.selectCasesLock.Lock()
 	defer mux.selectCasesLock.Unlock()
-	return db.selectCases, db.selectCasesDBCollection
+	return mux.selectCases, mux.selectCasesDBCollection
 }
 
 func (mux *Multiplexer) close(dbCollection string) {
@@ -69,7 +83,7 @@ func (mux *Multiplexer) close(dbCollection string) {
 	defer mux.selectCasesLock.Unlock()
 	for index, dbc := range mux.selectCasesDBCollection {
 		if dbc == dbCollection {
-			// create new slices to avoid corrupting the shared slices
+			// create brand new slices to avoid clobbering any acquired via getSelectCases()
 			selectCasesDBCollection := make([]string, 0, len(mux.selectCasesDBCollection)-1)
 			selectCasesDBCollection = append(selectCasesDBCollection, mux.selectCasesDBCollection[:index]...)
 			selectCasesDBCollection = append(selectCasesDBCollection, mux.selectCasesDBCollection[index+1:]...)
@@ -88,16 +102,16 @@ func (mux *Multiplexer) open(dbCollection string) chan []byte {
 	defer mux.selectCasesLock.Unlock()
 	in := make(chan []byte)
 
-	// create new slices to avoid corrupting the shared slices
+	// create brand new slices to avoid clobbering any acquired via getSelectCases()
 	selectCasesDBCollection := make([]string, 0, len(mux.selectCasesDBCollection)+1)
 	copy(selectCasesDBCollection, mux.selectCasesDBCollection)
-	selectCasesDBCollection = append(selectCasesDBCollection, muxCollection)
+	selectCasesDBCollection = append(selectCasesDBCollection, dbCollection)
 	mux.selectCasesDBCollection = selectCasesDBCollection
 
 	mux.selectCasesDBCollection = selectCasesDBCollection
 	selectCases := make([]reflect.SelectCase, 0, len(mux.selectCases)+1)
 	copy(selectCases, mux.selectCases)
-	selectCases = append(selectCases, reflect.SelectCase{reflect.SelectRecv, reflect.ValueOf(in), nil})
+	selectCases = append(selectCases, reflect.SelectCase{reflect.SelectRecv, reflect.ValueOf(in), reflect.Value{}})
 	mux.selectCases = selectCases
 
 	return in
@@ -106,7 +120,7 @@ func (mux *Multiplexer) open(dbCollection string) chan []byte {
 // MuxIn's live in the intents, and potentially owned by different threads than
 // the thread owning the Multiplexer
 type MuxIn struct {
-	in           <-chan []byte
+	in           chan<- []byte
 	dbcollection string
 	mux          *Multiplexer
 }
@@ -120,7 +134,7 @@ func (mxIn *MuxIn) Close() error {
 	return nil
 }
 func (mxIn *MuxIn) Open() error {
-	mxIn.in = mxIn.mux.open(mxIn.dbCollection)
+	mxIn.in = mxIn.mux.open(mxIn.dbcollection)
 	return nil
 }
 func (mxIn *MuxIn) Write(buf []byte) (int, error) {
