@@ -5,14 +5,17 @@ import (
 	"testing"
 )
 
-func TestMultiplexing(t *testing.T) {
-
+var dbCollections = []string{
+	"foo.bar",
+	"ding.bats",
+	"ding.dong",
+	"flim.flam.fooey",
+	"crow.bar",
 }
 
-func TestDemultiplexing(t *testing.T) {
+func Roundtrip(t *testing.T) {
+	Convey("", t, func() {
 
-}
-
-func TestRoundtrip(t *testing.T) {
-
+	})
+	return
 }

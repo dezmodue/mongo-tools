@@ -19,7 +19,7 @@ type Multiplexer struct {
 	buf                     [db.MaxBSONSize]byte
 }
 
-func (mux *Multiplexer) run() (err error) {
+func (mux *Multiplexer) Run() (err error) {
 	var delimiterBytes []byte = []byte{0xFF, 0xFF, 0xFF, 0xFF} // TODO, rectify this with delimiter
 	for {
 		selectCases, selectCasesDBCollection := mux.getSelectCases()
