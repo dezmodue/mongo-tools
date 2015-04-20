@@ -17,11 +17,11 @@ type Demultiplexer struct {
 }
 
 func (dmx *Demultiplexer) run() error {
-	parse := NewArchiveParser(dmx.in, dmx)
+	parse := Parser{In: dmx.in, dmx}
 	return parse.Run()
 }
 
-func (dmx *Demultiplexer) HandleOutOfBandBSON(buf []byte) error {
+func (dmx *Demultiplexer) HeaderBSON(buf []byte) error {
 	colHeader := CollectionHeader{}
 	err := bson.Unmarshal(buf, &colHeader)
 	if err != nil {
@@ -49,7 +49,7 @@ func (dmx *Demultiplexer) End() error {
 	return nil
 }
 
-func (dmx *Demultiplexer) DispatchBSON(buf []byte) error {
+func (dmx *Demultiplexer) BodyBSON(buf []byte) error {
 	if dmx.currentDBCollection == "" {
 		return fmt.Errorf("%v; collection data without a collection header")
 	}

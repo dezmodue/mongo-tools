@@ -73,7 +73,7 @@ func TestParsing(t *testing.T) {
 			So(tc.oobd[0], ShouldEqual, "out of band")
 			So(tc.ibd[0], ShouldEqual, "in band")
 		})
-		Convey("with an incorrect delimiter", func() {
+		Convey("with an incorrect terminator", func() {
 			buf := bytes.Buffer{}
 			buf.Write([]byte{0xFF, 0xFF, 0xFF, 0xFE})
 			b, _ := bson.Marshal(strStruct{"out of band"})

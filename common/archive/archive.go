@@ -13,4 +13,4 @@ type CollectionMetadata struct {
 
 const minBSONSize = 4 + 1 // an empty bson document should be exactly five bytes long
 
-const delimiter int32 = -1
+const terminator int32 = -1

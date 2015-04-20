@@ -20,7 +20,7 @@ type Multiplexer struct {
 }
 
 func (mux *Multiplexer) Run() (err error) {
-	var delimiterBytes []byte = []byte{0xFF, 0xFF, 0xFF, 0xFF} // TODO, rectify this with delimiter
+	var terminatorBytes []byte = []byte{0xFF, 0xFF, 0xFF, 0xFF} // TODO, rectify this with terminator
 	for {
 		selectCases, selectCasesDBCollection := mux.getSelectCases()
 		if len(selectCases) == 0 {
@@ -29,7 +29,7 @@ func (mux *Multiplexer) Run() (err error) {
 		}
 		index, value, ok := reflect.Select(selectCases)
 		if !ok {
-			_, err = mux.out.Write(delimiterBytes)
+			_, err = mux.out.Write(terminatorBytes)
 			if err != nil {
 				return err
 			}
@@ -45,7 +45,7 @@ func (mux *Multiplexer) Run() (err error) {
 			mux.currentDBCollection = ""
 		} else {
 			if selectCasesDBCollection[index] != mux.currentDBCollection {
-				_, err = mux.out.Write(delimiterBytes)
+				_, err = mux.out.Write(terminatorBytes)
 				if err != nil {
 					return err
 				}

@@ -7,26 +7,18 @@ import (
 )
 
 type ParserConsumer interface {
-	HandleOutOfBandBSON([]byte) error
-	DispatchBSON([]byte) error
+	HeaderBSON([]byte) error
+	BodyBSON([]byte) error
 	End() error
 }
 
 type Parser struct {
-	in       io.Reader
-	consumer ParserConsumer
-	buf      [db.MaxBSONSize]byte
-	length   int
+	In     io.Reader
+	buf    [db.MaxBSONSize]byte
+	length int
 }
 
-func NewArchiveParser(in io.Reader, consumer ParserConsumer) *Parser {
-	return &Parser{
-		in:       in,
-		consumer: consumer,
-	}
-}
-
-func (parse *Parser) readBSONOrDelimiter() (bool, error) {
+func (parse *Parser) readBSONOrTerminator() (bool, error) {
 	parse.length = 0
 	_, err := io.ReadAtLeast(parse.in, parse.buf[0:4], 4)
 	if err != nil {
@@ -38,14 +30,15 @@ func (parse *Parser) readBSONOrDelimiter() (bool, error) {
 			(uint32(parse.buf[2]) << 16) |
 			(uint32(parse.buf[3]) << 24),
 	)
-	if size == delimiter {
+	if size == terminator {
 		return true, nil
 	}
 	if size < minBSONSize || size > db.MaxBSONSize {
-		return false, fmt.Errorf("Corruption found in archive; %v is neither a valid bson length nor a archive delimiter", size)
+		return false, fmt.Errorf("Corruption found in archive; %v is neither a valid bson length nor a archive terminator", size)
 	}
-	// TODO Because we're reusing this same buffer for all of our IO, we are basically guaranteeing that we'll copy the bytes twice
-	// At some point we should fix this. It's slightly complex, because we'll need consumer methods closing one buffer and acquiring another
+	// TODO Because we're reusing this same buffer for all of our IO, we are basically guaranteeing that we'll
+	// copy the bytes twice.  At some point we should fix this. It's slightly complex, because we'll need consumer
+	// methods closing one buffer and acquiring another
 	_, err = io.ReadAtLeast(parse.in, parse.buf[4:size], int(size)-4)
 	if err != nil {
 		return false, err
@@ -57,33 +50,46 @@ func (parse *Parser) readBSONOrDelimiter() (bool, error) {
 	return false, nil
 }
 
-func (parse *Parser) Run() (err error) {
+func (parse *Parser) ReadAllBlocks(consumer ParserConsumer) (err error) {
+	for err == nil {
+		err = parse.ReadBlock(consumer)
+	}
+	if err == io.EOF {
+		return nil
+	}
+	return err
+}
+
+func (parse *Parser) ReadBlock(consumer ParserConsumer) (err error) {
+	terminator, err := parse.readBSONOrTerminator()
+	if err == io.EOF {
+		handlerErr := consumer.End()
+		if handlerErr != nil {
+			return handlerErr
+		}
+		return err
+	}
+	if err != nil {
+		return fmt.Errorf("Error parsing archive; %v", err)
+	}
+	if terminator {
+		return fmt.Errorf("Error parsing archive; consecutive terminators / empty blocks are not allowed")
+	}
+	err = consumer.HeaderBSON(parse.buf[:parse.length])
+	if err != nil {
+		return err
+	}
 	for {
-		delimiter, err := parse.readBSONOrDelimiter()
-		if err == io.EOF {
-			err = parse.consumer.End()
-			return err
+		terminator, err = parse.readBSONOrTerminator()
+		if err != nil { // all errors, including EOF are errors here
+			return fmt.Errorf("Error parsing archive; %v", err)
 		}
+		if terminator {
+			return nil
+		}
+		err = consumer.BodyBSON(parse.buf[:parse.length])
 		if err != nil {
-			return err
-		}
-		if delimiter {
-			delimiter, err = parse.readBSONOrDelimiter()
-			if err != nil { // all errors, including EOF are errors here
-				return err
-			}
-			if delimiter {
-				return fmt.Errorf("Error parsing archive; consecutive delimiters are not allowed")
-			}
-			err = parse.consumer.HandleOutOfBandBSON(parse.buf[:parse.length])
-			if err != nil {
-				return err
-			}
-		} else {
-			err = parse.consumer.DispatchBSON(parse.buf[:parse.length])
-			if err != nil {
-				return err
-			}
+			return fmt.Errorf("Error parsing archive; %v", err)
 		}
 	}
 }
