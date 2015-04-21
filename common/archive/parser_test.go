@@ -58,7 +58,7 @@ func TestParsing(t *testing.T) {
 			b, _ = bson.Marshal(strStruct{"body"})
 			buf.Write(b)
 			buf.Write(term)
-			parser.in = &buf
+			parser.In = &buf
 			err := parser.ReadBlock(tc)
 			So(err, ShouldBeNil)
 			So(tc.eof, ShouldBeFalse)
@@ -76,13 +76,13 @@ func TestParsing(t *testing.T) {
 			b, _ = bson.Marshal(strStruct{"body"})
 			buf.Write(b)
 			buf.Write(notTerm)
-			parser.in = &buf
+			parser.In = &buf
 			err := parser.ReadBlock(tc)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("An empty block", func() {
 			buf := bytes.Buffer{}
-			parser.in = &buf
+			parser.In = &buf
 			err := parser.ReadBlock(tc)
 			So(err, ShouldEqual, io.EOF)
 			So(tc.eof, ShouldBeTrue)
@@ -90,7 +90,7 @@ func TestParsing(t *testing.T) {
 		Convey("with an error comming from End", func() {
 			tc.eof = true
 			buf := bytes.Buffer{}
-			parser.in = &buf
+			parser.In = &buf
 			err := parser.ReadBlock(tc)
 			So(err, ShouldEqual, doubleEndError)
 		})
@@ -100,7 +100,7 @@ func TestParsing(t *testing.T) {
 			buf.Write(b)
 			b, _ = bson.Marshal(strStruct{"body"})
 			buf.Write(b)
-			parser.in = &buf
+			parser.In = &buf
 			err := parser.ReadBlock(tc)
 			So(err, ShouldNotBeNil)
 			So(tc.eof, ShouldBeFalse)
@@ -115,7 +115,7 @@ func TestParsing(t *testing.T) {
 			buf.Write(b[:len(b)-1])
 			buf.Write([]byte{0x01})
 			buf.Write(notTerm)
-			parser.in = &buf
+			parser.In = &buf
 			err := parser.ReadBlock(tc)
 			So(err, ShouldNotBeNil)
 			So(tc.eof, ShouldBeFalse)

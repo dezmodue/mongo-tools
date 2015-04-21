@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"io"
-	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -23,7 +22,6 @@ func (mux *Multiplexer) Run() (err error) {
 		selectCases, selectCasesDBCollection := mux.getSelectCases()
 		if len(selectCases) == 0 {
 			// you must start writers before you start the mux, otherwise the mux will just finish thinking there is no more work to do
-			fmt.Fprintf(os.Stderr, "no selected cases, finishing Run\n")
 			return nil
 		}
 		index, value, selectOk := reflect.Select(selectCases)

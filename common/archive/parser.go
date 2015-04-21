@@ -4,8 +4,14 @@ import (
 	"fmt"
 	"github.com/mongodb/mongo-tools/common/db"
 	"io"
-	//	"os"
 )
+
+// parser.go implements the parsing of the low-level archive format
+// The low level archive format is defined as zero or more blocks
+// where each block is defined as:
+//   a header BSON document
+//   zero or more body BSON documents
+//   a four byte terminator (0xFFFFFFFF)
 
 type ParserConsumer interface {
 	HeaderBSON([]byte) error
@@ -14,7 +20,7 @@ type ParserConsumer interface {
 }
 
 type Parser struct {
-	in     io.Reader
+	In     io.Reader
 	buf    [db.MaxBSONSize]byte
 	length int
 }
@@ -23,7 +29,7 @@ var errPrefix = "Corruption found in archive"
 
 func (parse *Parser) readBSONOrTerminator() (bool, error) {
 	parse.length = 0
-	_, err := io.ReadAtLeast(parse.in, parse.buf[0:4], 4)
+	_, err := io.ReadAtLeast(parse.In, parse.buf[0:4], 4)
 	if err != nil {
 		return false, err
 	}
@@ -42,7 +48,7 @@ func (parse *Parser) readBSONOrTerminator() (bool, error) {
 	// TODO Because we're reusing this same buffer for all of our IO, we are basically guaranteeing that we'll
 	// copy the bytes twice.  At some point we should fix this. It's slightly complex, because we'll need consumer
 	// methods closing one buffer and acquiring another
-	_, err = io.ReadAtLeast(parse.in, parse.buf[4:size], int(size)-4)
+	_, err = io.ReadAtLeast(parse.In, parse.buf[4:size], int(size)-4)
 	if err != nil {
 		return false, err
 	}
@@ -64,7 +70,7 @@ func (parse *Parser) ReadAllBlocks(consumer ParserConsumer) (err error) {
 }
 
 func (parse *Parser) ReadBlock(consumer ParserConsumer) (err error) {
-	terminator, err := parse.readBSONOrTerminator()
+	isTerminator, err := parse.readBSONOrTerminator()
 	if err == io.EOF {
 		handlerErr := consumer.End()
 		if handlerErr != nil {
@@ -75,7 +81,7 @@ func (parse *Parser) ReadBlock(consumer ParserConsumer) (err error) {
 	if err != nil {
 		return fmt.Errorf("%v; %v", errPrefix, err)
 	}
-	if terminator {
+	if isTerminator {
 		return fmt.Errorf("%v; consecutive terminators / empty blocks are not allowed", errPrefix)
 	}
 	err = consumer.HeaderBSON(parse.buf[:parse.length])
@@ -83,11 +89,11 @@ func (parse *Parser) ReadBlock(consumer ParserConsumer) (err error) {
 		return err
 	}
 	for {
-		terminator, err = parse.readBSONOrTerminator()
+		isTerminator, err = parse.readBSONOrTerminator()
 		if err != nil { // all errors, including EOF are errors here
-			return fmt.Errorf("%v; %v", err)
+			return fmt.Errorf("%v; %v", errPrefix, err)
 		}
-		if terminator {
+		if isTerminator {
 			return nil
 		}
 		err = consumer.BodyBSON(parse.buf[:parse.length])

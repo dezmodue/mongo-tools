@@ -5,20 +5,19 @@ import (
 	"github.com/mongodb/mongo-tools/common/db"
 	"gopkg.in/mgo.v2/bson"
 	"io"
-	//	"os"
 )
 
 var errorSuffix string = "Dump archive format error"
 
 type Demultiplexer struct {
 	in                  io.Reader
-	outs                map[string]chan<- []byte
+	outs                map[string]*DemuxOut
 	currentDBCollection string
 	buf                 [db.MaxBSONSize]byte
 }
 
 func (dmx *Demultiplexer) Run() error {
-	parse := Parser{in: dmx.in}
+	parse := Parser{In: dmx.in}
 	return parse.ReadAllBlocks(dmx)
 }
 
@@ -36,10 +35,11 @@ func (dmx *Demultiplexer) HeaderBSON(buf []byte) error {
 	}
 	dmx.currentDBCollection = colHeader.Database + "." + colHeader.Collection
 	if _, ok := dmx.outs[dmx.currentDBCollection]; !ok {
-		return fmt.Errorf("%v; collection, %v, header specifies db/collection that shouldn't be in the archive, or is already closed", errorSuffix, dmx.currentDBCollection, dmx.outs)
+		return fmt.Errorf("%v; collection, %v, header specifies db/collection that shouldn't be in the archive, or is already closed",
+			errorSuffix, dmx.currentDBCollection, dmx.outs)
 	}
 	if colHeader.EOF {
-		close(dmx.outs[dmx.currentDBCollection])
+		dmx.outs[dmx.currentDBCollection].Close()
 		delete(dmx.outs, dmx.currentDBCollection)
 		dmx.currentDBCollection = ""
 	}
@@ -58,35 +58,44 @@ func (dmx *Demultiplexer) BodyBSON(buf []byte) error {
 	if dmx.currentDBCollection == "" {
 		return fmt.Errorf("%v; collection data without a collection header", errorSuffix)
 	}
-	dmx.outs[dmx.currentDBCollection] <- buf
+	dmx.outs[dmx.currentDBCollection].readLen <- 0
+	readBuf := <-dmx.outs[dmx.currentDBCollection].readBuf
+	copy(readBuf, buf)
+	dmx.outs[dmx.currentDBCollection].readLen <- len(buf)
 	return nil
 }
 
 type DemuxOut struct {
-	out          <-chan []byte
+	readLen      chan int
+	readBuf      chan []byte
 	dbCollection string
 	demux        *Demultiplexer
 }
 
 func (dmxOut *DemuxOut) Read(p []byte) (int, error) {
-	p, ok := <-dmxOut.out
+	// Since we're the "reader" here, not the "writer" we need to start with a read, in case the chan is closed
+	_, ok := <-dmxOut.readLen
 	if !ok {
 		return 0, io.EOF
 	}
-	return len(p), nil
+	dmxOut.readBuf <- p
+	length := <-dmxOut.readLen
+	return length, nil
 }
 
 func (dmxOut *DemuxOut) Close() error {
+	close(dmxOut.readLen)
+	close(dmxOut.readBuf)
 	return nil
 }
 func (dmxOut *DemuxOut) Open() error {
-	out := make(chan []byte)
 	if dmxOut.demux.outs == nil {
-		dmxOut.demux.outs = make(map[string]chan<- []byte)
+		dmxOut.demux.outs = make(map[string]*DemuxOut)
 	}
-	// either we need to lock around all uses of the outs map, or make sure that all uses of the map happen in one thred
-	dmxOut.demux.outs[dmxOut.dbCollection] = out
-	dmxOut.out = out
+	dmxOut.readLen = make(chan int)
+	dmxOut.readBuf = make(chan []byte)
+	// TODO, figure out weather we need to lock around accessing outs
+	dmxOut.demux.outs[dmxOut.dbCollection] = dmxOut
 	return nil
 }
 func (dmxOut *DemuxOut) Write([]byte) (int, error) {
