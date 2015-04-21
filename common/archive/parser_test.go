@@ -5,32 +5,35 @@ import (
 	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"gopkg.in/mgo.v2/bson"
+	"io"
 	"testing"
 )
 
 type testConsumer struct {
-	oobd []string // out of band data
-	ibd  []string // in band data
+	oobd []string // header data
+	ibd  []string // body data
 	eof  bool
 }
 
-func (tc *testConsumer) HandleOutOfBandBSON(b []byte) error {
+func (tc *testConsumer) HeaderBSON(b []byte) error {
 	ss := strStruct{}
 	err := bson.Unmarshal(b, &ss)
 	tc.oobd = append(tc.oobd, ss.Str)
 	return err
 }
 
-func (tc *testConsumer) DispatchBSON(b []byte) error {
+func (tc *testConsumer) BodyBSON(b []byte) error {
 	ss := strStruct{}
 	err := bson.Unmarshal(b, &ss)
 	tc.ibd = append(tc.ibd, ss.Str)
 	return err
 }
 
+var doubleEndError = fmt.Errorf("double end")
+
 func (tc *testConsumer) End() (err error) {
 	if tc.eof {
-		err = fmt.Errorf("double end")
+		err = doubleEndError
 	}
 	tc.eof = true
 	return err
@@ -40,92 +43,83 @@ type strStruct struct {
 	Str string
 }
 
+var term = []byte{0xFF, 0xFF, 0xFF, 0xFF}
+var notTerm = []byte{0xFF, 0xFF, 0xFF, 0xFE}
+
 func TestParsing(t *testing.T) {
 
 	Convey("with a parser with a simple parse consumer", t, func() {
 		tc := &testConsumer{}
-		parser := Parser{consumer: tc}
-		Convey("with well formed in and out of band data", func() {
+		parser := Parser{}
+		Convey("A well formed header and body data", func() {
 			buf := bytes.Buffer{}
-			buf.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
-			b, _ := bson.Marshal(strStruct{"out of band"})
+			b, _ := bson.Marshal(strStruct{"header"})
 			buf.Write(b)
-			b, _ = bson.Marshal(strStruct{"in band"})
+			b, _ = bson.Marshal(strStruct{"body"})
 			buf.Write(b)
+			buf.Write(term)
 			parser.in = &buf
-			err := parser.Run()
+			err := parser.ReadBlock(tc)
 			So(err, ShouldBeNil)
+			So(tc.eof, ShouldBeFalse)
+			So(tc.oobd[0], ShouldEqual, "header")
+			So(tc.ibd[0], ShouldEqual, "body")
+
+			err = parser.ReadBlock(tc)
+			So(err, ShouldEqual, io.EOF)
 			So(tc.eof, ShouldBeTrue)
-			So(tc.oobd[0], ShouldEqual, "out of band")
-			So(tc.ibd[0], ShouldEqual, "in band")
 		})
-		Convey("with in band data before the out of band data", func() {
+		Convey("An incorrect terminator", func() {
 			buf := bytes.Buffer{}
-			b, _ := bson.Marshal(strStruct{"in band"})
+			b, _ := bson.Marshal(strStruct{"header"})
 			buf.Write(b)
-			buf.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
-			b, _ = bson.Marshal(strStruct{"out of band"})
+			b, _ = bson.Marshal(strStruct{"body"})
 			buf.Write(b)
+			buf.Write(notTerm)
 			parser.in = &buf
-			err := parser.Run()
-			So(err, ShouldBeNil)
-			So(tc.eof, ShouldBeTrue)
-			So(tc.oobd[0], ShouldEqual, "out of band")
-			So(tc.ibd[0], ShouldEqual, "in band")
-		})
-		Convey("with an incorrect terminator", func() {
-			buf := bytes.Buffer{}
-			buf.Write([]byte{0xFF, 0xFF, 0xFF, 0xFE})
-			b, _ := bson.Marshal(strStruct{"out of band"})
-			buf.Write(b)
-			b, _ = bson.Marshal(strStruct{"in band"})
-			buf.Write(b)
-			parser.in = &buf
-			err := parser.Run()
+			err := parser.ReadBlock(tc)
 			So(err, ShouldNotBeNil)
+		})
+		Convey("An empty block", func() {
+			buf := bytes.Buffer{}
+			parser.in = &buf
+			err := parser.ReadBlock(tc)
+			So(err, ShouldEqual, io.EOF)
+			So(tc.eof, ShouldBeTrue)
 		})
 		Convey("with an error comming from End", func() {
 			tc.eof = true
 			buf := bytes.Buffer{}
-			buf.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
-			b, _ := bson.Marshal(strStruct{"out of band"})
-			buf.Write(b)
-			b, _ = bson.Marshal(strStruct{"in band"})
-			buf.Write(b)
 			parser.in = &buf
-			err := parser.Run()
-			So(err, ShouldNotBeNil)
-			So(tc.eof, ShouldBeTrue)
-			So(tc.oobd[0], ShouldEqual, "out of band")
-			So(tc.ibd[0], ShouldEqual, "in band")
+			err := parser.ReadBlock(tc)
+			So(err, ShouldEqual, doubleEndError)
 		})
 		Convey("with an early EOF", func() {
 			buf := bytes.Buffer{}
-			buf.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
-			b, _ := bson.Marshal(strStruct{"out of band"})
+			b, _ := bson.Marshal(strStruct{"header"})
 			buf.Write(b)
-			b, _ = bson.Marshal(strStruct{"in band"})
-			buf.Write(b[:len(b)-1])
+			b, _ = bson.Marshal(strStruct{"body"})
+			buf.Write(b)
 			parser.in = &buf
-			err := parser.Run()
+			err := parser.ReadBlock(tc)
 			So(err, ShouldNotBeNil)
 			So(tc.eof, ShouldBeFalse)
-			So(tc.oobd[0], ShouldEqual, "out of band")
-			So(tc.ibd, ShouldBeNil)
+			So(tc.oobd[0], ShouldEqual, "header")
+			So(tc.ibd[0], ShouldEqual, "body")
 		})
 		Convey("with an bson without a null terminator", func() {
 			buf := bytes.Buffer{}
-			buf.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF})
-			b, _ := bson.Marshal(strStruct{"out of band"})
+			b, _ := bson.Marshal(strStruct{"header"})
 			buf.Write(b)
-			b, _ = bson.Marshal(strStruct{"in band"})
+			b, _ = bson.Marshal(strStruct{"body"})
 			buf.Write(b[:len(b)-1])
 			buf.Write([]byte{0x01})
+			buf.Write(notTerm)
 			parser.in = &buf
-			err := parser.Run()
+			err := parser.ReadBlock(tc)
 			So(err, ShouldNotBeNil)
 			So(tc.eof, ShouldBeFalse)
-			So(tc.oobd[0], ShouldEqual, "out of band")
+			So(tc.oobd[0], ShouldEqual, "header")
 			So(tc.ibd, ShouldBeNil)
 		})
 	})

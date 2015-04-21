@@ -12,5 +12,6 @@ type CollectionMetadata struct {
 }
 
 const minBSONSize = 4 + 1 // an empty bson document should be exactly five bytes long
-
 const terminator int32 = -1
+
+var terminatorBytes []byte = []byte{0xFF, 0xFF, 0xFF, 0xFF} // TODO, rectify this with terminator
