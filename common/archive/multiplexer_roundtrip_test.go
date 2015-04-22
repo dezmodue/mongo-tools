@@ -46,12 +46,15 @@ func TestBasicMux(t *testing.T) {
 		for index, dbc := range dbCollections {
 			closeDbc := dbc
 			go func() {
+				staticBSONBuf := make([]byte, db.MaxBSONSize)
 				for i := 0; i < 10000; i++ {
-					bson, _ := bson.Marshal(foo{Bar: index * i, Baz: closeDbc})
-					muxIns[closeDbc].Write(bson)
-					inChecksum[closeDbc].Write(bson)
-					//					fmt.Fprintf(os.Stderr, "%v\n", bson)
-					inLength[closeDbc] += len(bson)
+
+					bsonMarshal, _ := bson.Marshal(foo{Bar: index * i, Baz: closeDbc})
+					bsonBuf := staticBSONBuf[:len(bsonMarshal)]
+					copy(bsonBuf, bsonMarshal)
+					muxIns[closeDbc].Write(bsonBuf)
+					inChecksum[closeDbc].Write(bsonBuf)
+					inLength[closeDbc] += len(bsonBuf)
 				}
 				muxIns[closeDbc].Close()
 			}()
