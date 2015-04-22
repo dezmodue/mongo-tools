@@ -94,7 +94,7 @@ func TestBasicMux(t *testing.T) {
 		time.Sleep(time.Second)
 		for _, dbc := range namespaces {
 			So(inLength[dbc], ShouldEqual, outLength[dbc])
-			So(string(inChecksum[dbc].Sum([]byte{})), ShouldEqual, string(outChecksum[dbc].Sum([]byte{})))
+			So(inChecksum[dbc].Sum([]byte{}), ShouldResemble, outChecksum[dbc].Sum([]byte{}))
 		}
 	})
 	return
