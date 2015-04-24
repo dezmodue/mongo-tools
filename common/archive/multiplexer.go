@@ -5,12 +5,14 @@ import (
 	"github.com/mongodb/mongo-tools/common/intents"
 	"gopkg.in/mgo.v2/bson"
 	"io"
+	"os"
 	"reflect"
 	"sync"
 )
 
 type Multiplexer struct {
 	Out                  io.Writer
+	Control              chan byte
 	selectCasesLock      sync.Mutex
 	selectCasesNamespace []string
 	ins                  []*MuxIn
@@ -18,21 +20,33 @@ type Multiplexer struct {
 	currentNamespace     string
 }
 
-// Run multiplexes the inputs while inputs are open
+// Run multiplexes until it receives an EOF on its Control chan
 func (mux *Multiplexer) Run() error {
 	var err error
+	defer close(mux.Control)
+	defer func() {
+		fmt.Fprintf(os.Stderr, "err: %v", err)
+	}()
 	for {
 		selectCases, ins := mux.getSelectCases()
-		if len(selectCases) == 0 {
-			// you must start writers before you start the mux, otherwise the mux will just finish thinking there is no more work to do
+		selectCases = append(selectCases, reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(mux.Control),
+			Send: reflect.Value{},
+		})
+		controlIndex := len(selectCases) - 1
+		index, value, notEOF := reflect.Select(selectCases)
+		if index == controlIndex {
+			if notEOF {
+				continue
+			}
 			return nil
 		}
-		index, value, selectOk := reflect.Select(selectCases)
 		bsonBytes, ok := value.Interface().([]byte)
 		if !ok {
 			return fmt.Errorf("Multiplexer received a value that wasn't a []byte")
 		}
-		if !selectOk {
+		if notEOF {
 			err = mux.formatBody(ins[index], bsonBytes)
 			if err != nil {
 				return err
@@ -124,7 +138,7 @@ func (mux *Multiplexer) close(index int) {
 	ins = append(ins, mux.ins[index+1:]...)
 	mux.ins = ins
 
-	selectCases := make([]reflect.SelectCase, 0, len(mux.selectCases)-1)
+	selectCases := make([]reflect.SelectCase, 0, len(mux.selectCases)) // extra space for the control chan
 	selectCases = append(selectCases, mux.selectCases[:index]...)
 	selectCases = append(selectCases, mux.selectCases[index+1:]...)
 	mux.selectCases = selectCases
@@ -143,7 +157,7 @@ func (mux *Multiplexer) open(min *MuxIn) {
 	ins = append(ins, mux.ins...)
 	mux.ins = append(ins, min)
 
-	selectCases := make([]reflect.SelectCase, 0, len(mux.selectCases)+1)
+	selectCases := make([]reflect.SelectCase, 0, len(mux.selectCases)+2) // extra space for the control chan
 	selectCases = append(selectCases, mux.selectCases...)
 	mux.selectCases = append(selectCases,
 		reflect.SelectCase{
@@ -183,6 +197,7 @@ func (mxIn *MuxIn) Close() error {
 // and adds the SelectCase and the MuxIn in to the Multiplexer
 func (mxIn *MuxIn) Open() error {
 	mxIn.Mux.open(mxIn)
+	mxIn.Mux.Control <- 0
 	return nil
 }
 

@@ -177,7 +177,11 @@ func (dump *MongoDump) CreateIntentForCollection(dbName, colName string) error {
 
 	if !intent.IsSystemIndexes() {
 		intent.MetadataPath = dump.outputPath(dbName, colName+".metadata.json")
+		//if dump.OutputOptions.Archive {
+		//		intent.MetadataFile =
+		//} else {
 		intent.MetadataFile = &metadataFileFile{intent: intent}
+		//}
 	}
 
 	// add stdout flags if we're using stdout

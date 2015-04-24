@@ -144,9 +144,15 @@ func (dump *MongoDump) Dump() error {
 	if dump.OutputOptions.Archive {
 		dump.archive = &archive.ArchiveWriter{
 			Out: os.Stdout,
-			Mux: &archive.Multiplexer{Out: os.Stdout},
+			Mux: &archive.Multiplexer{Out: os.Stdout, Control: make(chan byte)},
 		}
+		go dump.archive.Mux.Run()
 	}
+	defer func() {
+		if dump.OutputOptions.Archive {
+			close(dump.archive.Mux.Control)
+		}
+	}()
 
 	// switch on what kind of execution to do
 	switch {
