@@ -10,10 +10,11 @@ import (
 var errorSuffix string = "dump archive format error"
 
 type Demultiplexer struct {
-	in               io.Reader
-	outs             map[string]*DemuxOut
-	currentNamespace string
-	buf              [db.MaxBSONSize]byte
+	in                   io.Reader
+	outs                 map[string]*DemuxOut
+	currentNamespace     string
+	buf                  [db.MaxBSONSize]byte
+	managerNameSpaceChan chan string
 }
 
 func (dmx *Demultiplexer) Run() error {
@@ -63,9 +64,13 @@ func (dmx *Demultiplexer) BodyBSON(buf []byte) error {
 	if dmx.currentNamespace == "" {
 		return fmt.Errorf("%v; collection data without a collection header", errorSuffix)
 	}
+	_, ok := dmx.outs[dmx.currentNamespace]
+	if !ok {
+		return fmt.Errorf("%v; no intent currently reading collection %v", errorSuffix, dmx.currentNamespace)
+	}
 	// First write a meaningless value to the reader because if the reader writes first
 	// then it will panic when the chan is closed. We want the reader to be able to detect
-	// that the chan is closed and act accordingly
+	// that the chan is closed, by reading, and act accordingly
 	dmx.outs[dmx.currentNamespace].readLenChan <- 0
 	// Recieve from the reader to put the bytes in to
 	readBufChan := <-dmx.outs[dmx.currentNamespace].readBufChan
