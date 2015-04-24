@@ -11,6 +11,7 @@ const (
 	Legacy PriorityType = iota
 	LongestTaskFirst
 	MultiDatabaseLTF
+	ArchiveOrder
 )
 
 // IntentPrioritizer encapsulates the logic of scheduling intents
@@ -235,13 +236,13 @@ type ArchivePrioritizer struct {
 	mgr                *Manager
 }
 
-func NewArchivePrioritizer(demuxNamespaceChan chan string, mgr *Manager) *archivePrioritizer {
+func NewArchivePrioritizer(demuxNamespaceChan chan string, mgr *Manager) *ArchivePrioritizer {
 	return &ArchivePrioritizer{demuxNamespaceChan: demuxNamespaceChan, mgr: mgr}
 }
 
 func (archive *ArchivePrioritizer) Get() *Intent {
 	namespace := <-archive.demuxNamespaceChan
-	return archive.mgr.IntentByNamespace[namespace]
+	return archive.mgr.IntentForNamespace(namespace)
 }
 
 func (archive *ArchivePrioritizer) Finish(*Intent) {

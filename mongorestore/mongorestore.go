@@ -230,8 +230,8 @@ func (restore *MongoRestore) Restore() error {
 	}
 
 	// Restore the regular collections
-	if restore.OutputOptions.Archive {
-		restore.manager.Finalize(intents.Archive)
+	if restore.InputOptions.Archive {
+		restore.manager.Finalize(intents.ArchiveOrder)
 	} else if restore.OutputOptions.NumParallelCollections > 1 {
 		restore.manager.Finalize(intents.MultiDatabaseLTF)
 	} else {

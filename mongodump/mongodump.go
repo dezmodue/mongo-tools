@@ -4,6 +4,7 @@ package mongodump
 import (
 	"bufio"
 	"fmt"
+	"github.com/mongodb/mongo-tools/common/archive"
 	"github.com/mongodb/mongo-tools/common/auth"
 	"github.com/mongodb/mongo-tools/common/bsonutil"
 	"github.com/mongodb/mongo-tools/common/db"
@@ -16,6 +17,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"io"
+	"os"
 	"time"
 )
 
@@ -43,6 +45,7 @@ type MongoDump struct {
 	oplogStart      bson.MongoTimestamp
 	isMongos        bool
 	authVersion     int
+	archive         *archive.ArchiveWriter
 	progressManager *progress.Manager
 }
 
@@ -135,6 +138,13 @@ func (dump *MongoDump) Dump() error {
 		if dump.authVersion < 3 {
 			return fmt.Errorf("backing up users and roles is only supported for "+
 				"deployments with auth schema versions >= 3, found: %v", dump.authVersion)
+		}
+	}
+
+	if dump.OutputOptions.Archive {
+		dump.archive = &archive.ArchiveWriter{
+			Out: os.Stdout,
+			Mux: &archive.Multiplexer{Out: os.Stdout},
 		}
 	}
 

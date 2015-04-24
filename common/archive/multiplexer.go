@@ -2,15 +2,15 @@ package archive
 
 import (
 	"fmt"
+	"github.com/mongodb/mongo-tools/common/intents"
 	"gopkg.in/mgo.v2/bson"
 	"io"
 	"reflect"
-	"strings"
 	"sync"
 )
 
 type Multiplexer struct {
-	out                  io.Writer
+	Out                  io.Writer
 	selectCasesLock      sync.Mutex
 	selectCasesNamespace []string
 	ins                  []*MuxIn
@@ -38,7 +38,7 @@ func (mux *Multiplexer) Run() error {
 				return err
 			}
 		} else {
-			err = mux.formatEOF(index, ins[index].namespace)
+			err = mux.formatEOF(index, ins[index])
 			if err != nil {
 				return err
 			}
@@ -50,26 +50,25 @@ func (mux *Multiplexer) Run() error {
 // if the doc belongs to a different namespace from the last header
 func (mux *Multiplexer) formatBody(in *MuxIn, bsonBytes []byte) error {
 	var err error
-	if in.namespace != mux.currentNamespace {
+	if in.Intent.Namespace() != mux.currentNamespace {
 		// Handle the change of which DB/Collection we're writing docs for
 		if mux.currentNamespace != "" {
-			_, err = mux.out.Write(terminatorBytes)
+			_, err = mux.Out.Write(terminatorBytes)
 			if err != nil {
 				return err
 			}
 		}
-		namespaceParts := strings.SplitN(in.namespace, ".", 2)
-		header, err := bson.Marshal(CollectionHeader{Database: namespaceParts[0], Collection: namespaceParts[1]})
+		header, err := bson.Marshal(CollectionHeader{Database: in.Intent.DB, Collection: in.Intent.C})
 		if err != nil {
 			return err
 		}
-		_, err = mux.out.Write(header)
+		_, err = mux.Out.Write(header)
 		if err != nil {
 			return err
 		}
 	}
-	mux.currentNamespace = in.namespace
-	length, err := mux.out.Write(bsonBytes)
+	mux.currentNamespace = in.Intent.Namespace()
+	length, err := mux.Out.Write(bsonBytes)
 	if err != nil {
 		return err
 	}
@@ -78,24 +77,23 @@ func (mux *Multiplexer) formatBody(in *MuxIn, bsonBytes []byte) error {
 }
 
 // foratEOF writes the EOF header in to the archive
-func (mux *Multiplexer) formatEOF(index int, namespace string) error {
+func (mux *Multiplexer) formatEOF(index int, in *MuxIn) error {
 	var err error
 	if mux.currentNamespace != "" {
-		_, err = mux.out.Write(terminatorBytes)
+		_, err = mux.Out.Write(terminatorBytes)
 		if err != nil {
 			return err
 		}
 	}
-	namespaceParts := strings.SplitN(namespace, ".", 2)
-	eofHeader, err := bson.Marshal(CollectionHeader{Database: namespaceParts[0], Collection: namespaceParts[1], EOF: true})
+	eofHeader, err := bson.Marshal(CollectionHeader{Database: in.Intent.DB, Collection: in.Intent.C, EOF: true})
 	if err != nil {
 		return err
 	}
-	_, err = mux.out.Write(eofHeader)
+	_, err = mux.Out.Write(eofHeader)
 	if err != nil {
 		return err
 	}
-	_, err = mux.out.Write(terminatorBytes)
+	_, err = mux.Out.Write(terminatorBytes)
 	if err != nil {
 		return err
 	}
@@ -162,8 +160,8 @@ func (mux *Multiplexer) open(min *MuxIn) {
 type MuxIn struct {
 	writeChan    chan<- []byte
 	writeLenChan chan int
-	namespace    string
-	mux          *Multiplexer
+	Intent       *intents.Intent
+	Mux          *Multiplexer
 }
 
 // Read does nothing for MuxIns
@@ -184,7 +182,7 @@ func (mxIn *MuxIn) Close() error {
 // Open is implemented in Mux.open, but in short, it creates chans and a select case
 // and adds the SelectCase and the MuxIn in to the Multiplexer
 func (mxIn *MuxIn) Open() error {
-	mxIn.mux.open(mxIn)
+	mxIn.Mux.open(mxIn)
 	return nil
 }
 

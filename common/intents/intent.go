@@ -132,32 +132,32 @@ func (manager *Manager) Put(intent *Intent) {
 	// bucket special-case collections
 	if intent.IsOplog() {
 		manager.oplogIntent = intent
-		specialIntents[intent.Namespace()] = intent
+		manager.specialIntents[intent.Namespace()] = intent
 		return
 	}
 	if intent.IsSystemIndexes() {
 		manager.indexIntents[intent.DB] = intent
-		specialIntents[intent.Namespace()] = intent
+		manager.specialIntents[intent.Namespace()] = intent
 		return
 	}
 	if intent.IsUsers() {
 		if intent.BSONPath != "" {
 			manager.usersIntent = intent
-			specialIntents[intent.Namespace()] = intent
+			manager.specialIntents[intent.Namespace()] = intent
 		}
 		return
 	}
 	if intent.IsRoles() {
 		if intent.BSONPath != "" {
 			manager.rolesIntent = intent
-			specialIntents[intent.Namespace()] = intent
+			manager.specialIntents[intent.Namespace()] = intent
 		}
 		return
 	}
 	if intent.IsAuthVersion() {
 		if intent.BSONPath != "" {
 			manager.versionIntent = intent
-			specialIntents[intent.Namespace()] = intent
+			manager.specialIntents[intent.Namespace()] = intent
 		}
 		return
 	}
@@ -309,7 +309,8 @@ func (manager *Manager) Finalize(pType PriorityType) {
 		manager.prioritizer = NewMultiDatabaseLTFPrioritizer(manager.intentsByDiscoveryOrder)
 	case ArchiveOrder:
 		log.Log(log.DebugHigh, "finalizing intent manager with archive order prioritizer")
-		manager.prioritizer = NewArchivePrioritizer(manager.intentsByDiscoveryOrder)
+		// XXX figure how how to get the required parameters here
+		//		manager.prioritizer = NewArchivePrioritizer(manager.intentsByDiscoveryOrder)
 	default:
 		panic("cannot initialize IntentPrioritizer with unknown type")
 	}

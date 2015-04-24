@@ -1,5 +1,9 @@
 package archive
 
+import (
+	"io"
+)
+
 type CollectionHeader struct {
 	Database   string `bson:"db"`
 	Collection string `bson:"collection"`
@@ -28,3 +32,13 @@ var terminator int32 = -1
 var terminatorBytes []byte = []byte{0xFF, 0xFF, 0xFF, 0xFF} // TODO, rectify this with terminator
 
 const MagicNumber int32 = 0x6de9818b
+
+type ArchiveWriter struct {
+	Mux *Multiplexer
+	Out io.WriteCloser
+}
+
+type ArchiveReader struct {
+	Demux *Demultiplexer
+	In    io.ReadCloser
+}

@@ -3,6 +3,7 @@ package archive
 import (
 	"fmt"
 	"github.com/mongodb/mongo-tools/common/db"
+	"github.com/mongodb/mongo-tools/common/intents"
 	"gopkg.in/mgo.v2/bson"
 	"io"
 )
@@ -88,8 +89,8 @@ func (dmx *Demultiplexer) BodyBSON(buf []byte) error {
 type DemuxOut struct {
 	readLenChan chan int
 	readBufChan chan []byte
-	namespace   string
-	demux       *Demultiplexer
+	Intent      *intents.Intent
+	Demux       *Demultiplexer
 }
 
 // Read is part of the intent.file interface
@@ -118,13 +119,13 @@ func (dmxOut *DemuxOut) Close() error {
 // It creates the chan's in the DemuxOut and adds the DemuxOut to the
 // set of DemuxOuts in the demultiplexer
 func (dmxOut *DemuxOut) Open() error {
-	if dmxOut.demux.outs == nil {
-		dmxOut.demux.outs = make(map[string]*DemuxOut)
+	if dmxOut.Demux.outs == nil {
+		dmxOut.Demux.outs = make(map[string]*DemuxOut)
 	}
 	dmxOut.readLenChan = make(chan int)
 	dmxOut.readBufChan = make(chan []byte)
 	// TODO, figure out weather we need to lock around accessing outs
-	dmxOut.demux.outs[dmxOut.namespace] = dmxOut
+	dmxOut.Demux.outs[dmxOut.Intent.Namespace()] = dmxOut
 	return nil
 }
 func (dmxOut *DemuxOut) Write([]byte) (int, error) {
