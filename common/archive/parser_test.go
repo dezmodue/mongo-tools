@@ -29,11 +29,9 @@ func (tc *testConsumer) BodyBSON(b []byte) error {
 	return err
 }
 
-var doubleEndError = fmt.Errorf("double end")
-
 func (tc *testConsumer) End() (err error) {
 	if tc.eof {
-		err = doubleEndError
+		err = fmt.Errorf("double end")
 	}
 	tc.eof = true
 	return err
@@ -92,7 +90,7 @@ func TestParsing(t *testing.T) {
 			buf := bytes.Buffer{}
 			parser.In = &buf
 			err := parser.ReadBlock(tc)
-			So(err, ShouldEqual, doubleEndError)
+			So(err.Error(), ShouldContainSubstring, "double end")
 		})
 		Convey("with an early EOF", func() {
 			buf := bytes.Buffer{}

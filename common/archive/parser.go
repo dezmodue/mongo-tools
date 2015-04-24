@@ -25,13 +25,41 @@ type Parser struct {
 	length int
 }
 
-var errPrefix = "Corruption found in archive"
+type ParserError struct {
+	Err error
+	Msg string
+}
 
+func (pe *ParserError) Error() string {
+	err := fmt.Sprintf("corruption found in archive; %v", pe.Msg)
+	if pe.Err != nil {
+		err = fmt.Sprintf("%v ( %v )", err, pe.Err)
+	}
+	return err
+}
+
+func parserError(msg string) error {
+	return &ParserError{
+		Msg: msg,
+	}
+}
+
+func parserErrError(msg string, err error) error {
+	return &ParserError{
+		Err: err,
+		Msg: msg,
+	}
+}
+
+// readBSONOrTerminator
 func (parse *Parser) readBSONOrTerminator() (bool, error) {
 	parse.length = 0
 	_, err := io.ReadAtLeast(parse.In, parse.buf[0:4], 4)
-	if err != nil {
+	if err == io.EOF {
 		return false, err
+	}
+	if err != nil {
+		return false, parserErrError("head length or terminator", err)
 	}
 	size := int32(
 		(uint32(parse.buf[0]) << 0) |
@@ -43,17 +71,18 @@ func (parse *Parser) readBSONOrTerminator() (bool, error) {
 		return true, nil
 	}
 	if size < minBSONSize || size > db.MaxBSONSize {
-		return false, fmt.Errorf("%v; %v is neither a valid bson length nor a archive terminator", errPrefix, size)
+		return false, parserError(fmt.Sprintf("%v is neither a valid bson length nor a archive terminator", size))
 	}
 	// TODO Because we're reusing this same buffer for all of our IO, we are basically guaranteeing that we'll
 	// copy the bytes twice.  At some point we should fix this. It's slightly complex, because we'll need consumer
 	// methods closing one buffer and acquiring another
 	_, err = io.ReadAtLeast(parse.In, parse.buf[4:size], int(size)-4)
 	if err != nil {
-		return false, err
+		// any error, including EOF is an error so we wrap it up
+		return false, parserErrError("read bson", err)
 	}
 	if parse.buf[size-1] != 0x00 {
-		return false, fmt.Errorf("%v; bson doesn't end with a null byte", errPrefix)
+		return false, parserError("bson doesn't end with a null byte")
 	}
 	parse.length = int(size)
 	return false, nil
@@ -74,31 +103,31 @@ func (parse *Parser) ReadBlock(consumer ParserConsumer) (err error) {
 	if err == io.EOF {
 		handlerErr := consumer.End()
 		if handlerErr != nil {
-			return handlerErr
+			return parserErrError("ParserConsumer.End", handlerErr)
 		}
 		return err
 	}
 	if err != nil {
-		return fmt.Errorf("%v; %v", errPrefix, err)
+		return err
 	}
 	if isTerminator {
-		return fmt.Errorf("%v; consecutive terminators / empty blocks are not allowed", errPrefix)
+		return parserError("consecutive terminators / headerless blocks are not allowed")
 	}
 	err = consumer.HeaderBSON(parse.buf[:parse.length])
 	if err != nil {
-		return err
+		return parserErrError("ParserConsumer.HeaderBSON()", err)
 	}
 	for {
 		isTerminator, err = parse.readBSONOrTerminator()
 		if err != nil { // all errors, including EOF are errors here
-			return fmt.Errorf("%v; %v", errPrefix, err)
+			return err
 		}
 		if isTerminator {
 			return nil
 		}
 		err = consumer.BodyBSON(parse.buf[:parse.length])
 		if err != nil {
-			return fmt.Errorf("%v; %v", errPrefix, err)
+			return parserErrError("ParserConsumer.BodyBSON()", err)
 		}
 	}
 }
