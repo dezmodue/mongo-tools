@@ -16,8 +16,10 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 )
 
 // MongoRestore is a container for the user-specified options and
@@ -54,6 +56,9 @@ type MongoRestore struct {
 	dbCollectionIndexes map[string]collectionIndexes
 
 	archive *archive.Reader
+
+	// channel on which to notify if/when a termination signal is received
+	termChan chan struct{}
 }
 
 type collectionIndexes map[string][]IndexDocument
@@ -277,6 +282,7 @@ func (restore *MongoRestore) Restore() error {
 		restore.archive.Demux.NamespaceErrorChan = namespaceErrorChan
 
 		go restore.archive.Demux.Run()
+
 		// consume the new namespace announcement from the demux for all of the collections that get cached
 		for {
 			ns := <-namespaceChan
@@ -335,9 +341,31 @@ func (restore *MongoRestore) Restore() error {
 		restore.manager.Finalize(intents.Legacy)
 	}
 
-	err = restore.RestoreIntents()
-	if err != nil {
-		return fmt.Errorf("restore error: %v", err)
+	restore.termChan = make(chan struct{})
+	restoreErrChan := make(chan error, 1)
+	signalErrChan := make(chan error, 1)
+
+	go func() {
+		signalErrChan <- restore.handleSignals()
+	}()
+
+	go func() {
+		restoreErrChan <- restore.RestoreIntents()
+	}()
+
+RestoreWait:
+	for {
+		select {
+		case err := <-signalErrChan:
+			if err != nil {
+				os.Exit(util.ExitKill)
+			}
+		case err := <-restoreErrChan:
+			if err != nil {
+				return err
+			}
+			break RestoreWait
+		}
 	}
 
 	// Restore users/roles
@@ -396,4 +424,24 @@ func (restore *MongoRestore) getArchiveReader() (rc io.ReadCloser, err error) {
 		return gzip.NewReader(rc)
 	}
 	return rc, nil
+}
+
+// handleSignals listens for either SIGTERM, SIGINT or the
+// SIGHUP signal. It ends restore reads for all goroutines
+// as soon as any of those signals is received.
+func (restore *MongoRestore) handleSignals() error {
+	log.Log(log.DebugLow, "will listen for SIGTERM, SIGINT and SIGHUP")
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
+	i := 0
+	for _ = range sigChan {
+		if i != 0 {
+			log.Log(log.Always, "forcefully terminating mongorestore")
+			return util.ErrTerminated
+		}
+		log.Log(log.Always, "ending restore reads")
+		close(restore.termChan)
+		i++
+	}
+	return nil
 }
