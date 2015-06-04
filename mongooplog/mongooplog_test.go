@@ -1,9 +1,9 @@
 package mongooplog
 
 import (
-	"github.com/mongodb/mongo-tools/common/db"
-	"github.com/mongodb/mongo-tools/common/options"
-	"github.com/mongodb/mongo-tools/common/testutil"
+	"github.com/dezmodue/mongo-tools/common/db"
+	"github.com/dezmodue/mongo-tools/common/options"
+	"github.com/dezmodue/mongo-tools/common/testutil"
 	. "github.com/smartystreets/goconvey/convey"
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2"

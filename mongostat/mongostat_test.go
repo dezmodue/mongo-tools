@@ -1,7 +1,7 @@
 package mongostat
 
 import (
-	"github.com/mongodb/mongo-tools/common/testutil"
+	"github.com/dezmodue/mongo-tools/common/testutil"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	"time"

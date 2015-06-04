@@ -3,8 +3,8 @@ package archive
 import (
 	"bytes"
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/db"
-	"github.com/mongodb/mongo-tools/common/intents"
+	"github.com/dezmodue/mongo-tools/common/db"
+	"github.com/dezmodue/mongo-tools/common/intents"
 	. "github.com/smartystreets/goconvey/convey"
 	"gopkg.in/mgo.v2/bson"
 	"hash"

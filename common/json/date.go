@@ -2,7 +2,7 @@ package json
 
 import (
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/util"
+	"github.com/dezmodue/mongo-tools/common/util"
 	"reflect"
 )
 

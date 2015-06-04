@@ -2,7 +2,7 @@ package archive
 
 import (
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/db"
+	"github.com/dezmodue/mongo-tools/common/db"
 	"io"
 )
 

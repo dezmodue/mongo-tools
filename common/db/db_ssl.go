@@ -3,8 +3,8 @@
 package db
 
 import (
-	"github.com/mongodb/mongo-tools/common/db/openssl"
-	"github.com/mongodb/mongo-tools/common/options"
+	"github.com/dezmodue/mongo-tools/common/db/openssl"
+	"github.com/dezmodue/mongo-tools/common/options"
 )
 
 func init() {

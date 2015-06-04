@@ -1,7 +1,7 @@
 package testutil
 
 import (
-	commonOpts "github.com/mongodb/mongo-tools/common/options"
+	commonOpts "github.com/dezmodue/mongo-tools/common/options"
 )
 
 func GetSSLOptions() commonOpts.SSL {

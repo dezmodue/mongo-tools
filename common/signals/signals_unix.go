@@ -3,7 +3,7 @@
 package signals
 
 import (
-	"github.com/mongodb/mongo-tools/common/util"
+	"github.com/dezmodue/mongo-tools/common/util"
 	"os"
 	"os/signal"
 	"syscall"

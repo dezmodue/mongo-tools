@@ -2,7 +2,7 @@ package progress
 
 import (
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/text"
+	"github.com/dezmodue/mongo-tools/common/text"
 	"io"
 	"sync"
 	"time"

@@ -6,12 +6,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/json"
-	"github.com/mongodb/mongo-tools/common/util"
+	"github.com/dezmodue/mongo-tools/common/json"
+	"github.com/dezmodue/mongo-tools/common/util"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"strconv"
 	"time"
+	"reflect"
 )
 
 var ErrNoSuchField = errors.New("no such field")
@@ -102,11 +103,16 @@ func ParseSpecialKeys(doc map[string]interface{}) (interface{}, error) {
 			case int64:
 				return time.Unix(v/1e3, v%1e3*1e6), nil
 
+			case int32:
+				n := int64(v)
+				return time.Unix(n/1e3, n%1e3*1e6), nil
+
 			case json.ISODate:
 				return v, nil
 
 			default:
-				return nil, errors.New("invalid type for $date field")
+				errmsg := "invalid type for $date field: " + string(reflect.TypeOf(v).Kind())
+				return nil, errors.New(errmsg)
 			}
 		}
 

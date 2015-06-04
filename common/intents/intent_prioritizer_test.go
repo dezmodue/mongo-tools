@@ -2,7 +2,7 @@ package intents
 
 import (
 	"container/heap"
-	"github.com/mongodb/mongo-tools/common/testutil"
+	"github.com/dezmodue/mongo-tools/common/testutil"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 )

@@ -3,8 +3,8 @@ package mongoexport
 import (
 	"bytes"
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/bsonutil"
-	"github.com/mongodb/mongo-tools/common/json"
+	"github.com/dezmodue/mongo-tools/common/bsonutil"
+	"github.com/dezmodue/mongo-tools/common/json"
 	"gopkg.in/mgo.v2/bson"
 	"io"
 )

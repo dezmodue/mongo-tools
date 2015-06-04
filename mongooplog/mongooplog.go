@@ -3,10 +3,10 @@ package mongooplog
 
 import (
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/db"
-	"github.com/mongodb/mongo-tools/common/log"
-	"github.com/mongodb/mongo-tools/common/options"
-	"github.com/mongodb/mongo-tools/common/util"
+	"github.com/dezmodue/mongo-tools/common/db"
+	"github.com/dezmodue/mongo-tools/common/log"
+	"github.com/dezmodue/mongo-tools/common/options"
+	"github.com/dezmodue/mongo-tools/common/util"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"

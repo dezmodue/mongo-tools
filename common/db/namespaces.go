@@ -2,8 +2,8 @@ package db
 
 import (
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/bsonutil"
-	"github.com/mongodb/mongo-tools/common/log"
+	"github.com/dezmodue/mongo-tools/common/bsonutil"
+	"github.com/dezmodue/mongo-tools/common/log"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"strings"

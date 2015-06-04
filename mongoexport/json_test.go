@@ -2,8 +2,8 @@ package mongoexport
 
 import (
 	"bytes"
-	"github.com/mongodb/mongo-tools/common/json"
-	"github.com/mongodb/mongo-tools/common/testutil"
+	"github.com/dezmodue/mongo-tools/common/json"
+	"github.com/dezmodue/mongo-tools/common/testutil"
 	. "github.com/smartystreets/goconvey/convey"
 	"gopkg.in/mgo.v2/bson"
 	"testing"

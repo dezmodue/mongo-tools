@@ -3,8 +3,8 @@ package bsonutil
 import (
 	"bytes"
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/json"
-	"github.com/mongodb/mongo-tools/common/util"
+	"github.com/dezmodue/mongo-tools/common/json"
+	"github.com/dezmodue/mongo-tools/common/util"
 	"gopkg.in/mgo.v2/bson"
 )
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TOOLS_PKG='github.com/mongodb/mongo-tools'
+TOOLS_PKG='github.com/dezmodue/mongo-tools'
 
 setgopath() {
 	if [ "Windows_NT" != "$OS" ]; then

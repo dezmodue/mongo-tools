@@ -5,8 +5,8 @@ package db
 import (
 	"errors"
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/options"
-	"github.com/mongodb/mongo-tools/common/password"
+	"github.com/dezmodue/mongo-tools/common/options"
+	"github.com/dezmodue/mongo-tools/common/password"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"io"

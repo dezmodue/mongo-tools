@@ -17,7 +17,7 @@ Setup
 Clone the repo and run `. ./set_gopath.sh` (`set_gopath.bat` on Windows) to setup your GOPATH:
 
 ```
-git clone https://github.com/mongodb/mongo-tools
+git clone https://github.com/dezmodue/mongo-tools
 cd mongo-tools
 . ./set_gopath.sh
 ```

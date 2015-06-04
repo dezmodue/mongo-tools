@@ -2,10 +2,10 @@ package mongoimport
 
 import (
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/bsonutil"
-	"github.com/mongodb/mongo-tools/common/db"
-	"github.com/mongodb/mongo-tools/common/log"
-	"github.com/mongodb/mongo-tools/common/util"
+	"github.com/dezmodue/mongo-tools/common/bsonutil"
+	"github.com/dezmodue/mongo-tools/common/db"
+	"github.com/dezmodue/mongo-tools/common/log"
+	"github.com/dezmodue/mongo-tools/common/util"
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/tomb.v2"
 	"io"

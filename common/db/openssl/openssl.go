@@ -8,8 +8,8 @@ import (
 
 	"gopkg.in/mgo.v2"
 
-	"github.com/mongodb/mongo-tools/common/options"
-	"github.com/mongodb/mongo-tools/common/util"
+	"github.com/dezmodue/mongo-tools/common/options"
+	"github.com/dezmodue/mongo-tools/common/util"
 	"github.com/spacemonkeygo/openssl"
 )
 

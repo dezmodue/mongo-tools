@@ -3,8 +3,8 @@ package archive
 import (
 	"bytes"
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/intents"
-	"github.com/mongodb/mongo-tools/common/log"
+	"github.com/dezmodue/mongo-tools/common/intents"
+	"github.com/dezmodue/mongo-tools/common/log"
 	"gopkg.in/mgo.v2/bson"
 	"io"
 	"path/filepath"

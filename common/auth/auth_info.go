@@ -3,7 +3,7 @@ package auth
 
 import (
 	"fmt"
-	"github.com/mongodb/mongo-tools/common/db"
+	"github.com/dezmodue/mongo-tools/common/db"
 	"gopkg.in/mgo.v2/bson"
 	"strings"
 )

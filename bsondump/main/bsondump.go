@@ -2,11 +2,11 @@
 package main
 
 import (
-	"github.com/mongodb/mongo-tools/bsondump"
-	"github.com/mongodb/mongo-tools/common/log"
-	"github.com/mongodb/mongo-tools/common/options"
-	"github.com/mongodb/mongo-tools/common/signals"
-	"github.com/mongodb/mongo-tools/common/util"
+	"github.com/dezmodue/mongo-tools/bsondump"
+	"github.com/dezmodue/mongo-tools/common/log"
+	"github.com/dezmodue/mongo-tools/common/options"
+	"github.com/dezmodue/mongo-tools/common/signals"
+	"github.com/dezmodue/mongo-tools/common/util"
 	"os"
 )
 

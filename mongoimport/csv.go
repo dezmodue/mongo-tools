@@ -2,7 +2,7 @@ package mongoimport
 
 import (
 	"fmt"
-	"github.com/mongodb/mongo-tools/mongoimport/csv"
+	"github.com/dezmodue/mongo-tools/mongoimport/csv"
 	"gopkg.in/mgo.v2/bson"
 	"io"
 )
